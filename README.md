@@ -1,3 +1,12 @@
+# ViZDoomのリポジトリ
+[VizDoom](https://github.com/mwydmuch/ViZDoom)からクローンしました．
+概要は下のクローン元のREADMEを参照してください．
+
+重要：このリポジトリの最新版を試したいときはdevelopブランチを使ってください．masterブランチはクローン元のmasterブランチを意味しています．
+masterブランチは今後，クローン元で修正があった場合に使うため，手を付けないでください．
+
+
+
 # ViZDoom [![Build Status](https://travis-ci.org/mwydmuch/ViZDoom.svg?branch=master)](https://travis-ci.org/mwydmuch/ViZDoom)
 [http://vizdoom.cs.put.edu.pl](http://vizdoom.cs.put.edu.pl)
 

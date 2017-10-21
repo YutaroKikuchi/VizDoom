@@ -78,6 +78,7 @@ COPY learning_tensorflow.py .
 COPY config ./config/.
 COPY vizdoom_dqn.ipynb .
 
+COPY jupyter_notebook_config.py .
 RUN jupyter notebook --generate-config
 RUN rm ~/.jupyter/jupyter_notebook_config.py
 RUN mv ~/jupyter_notebook_config.py ~/.jupyter/.

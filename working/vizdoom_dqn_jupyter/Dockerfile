@@ -67,9 +67,6 @@ RUN export uid=${HOST_UID} gid=${HOST_GID} && \
     chmod 0440 /etc/sudoers.d/$USER_NAME && \
     chown ${uid}:${gid} -R ${HOME_DIR}
 
-
-RUN git clone https://github.com/mwydmuch/ViZDoom ${HOME_DIR}/vizdoom
-RUN pip3 install ${HOME_DIR}/vizdoom
 RUN pip3 install tensorflow-gpu
 RUN pip3 install matplotlib scipy scikit-image tqdm
 
@@ -80,5 +77,9 @@ RUN mkdir config
 COPY learning_tensorflow.py .
 COPY config ./config/.
 COPY vizdoom_dqn.ipynb .
+
+RUN jupyter notebook --generate-config
+RUN rm ~/.jupyter/jupyter_notebook_config.py
+RUN mv ~/jupyter_notebook_config.py ~/.jupyter/.
 
 CMD /bin/bash

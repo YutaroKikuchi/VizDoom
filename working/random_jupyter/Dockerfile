@@ -71,5 +71,11 @@ RUN mkdir config
 COPY vizdoom_random.py .
 COPY random.ipynb .
 COPY config ./config
+COPY jupyter_notebook_config.py .
+
+# notebook can be accesible by remote server
+RUN jupyter notebook --generate-config
+RUN rm ~/.jupyter/jupyter_notebook_config.py
+RUN mv ~/jupyter_notebook_config.py ~/.jupyter/.
 
 CMD /bin/bash

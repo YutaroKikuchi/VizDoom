@@ -1,153 +1,53 @@
 #!/usr/bin/env python
 
-#####################################################################
-# This script presents how to use the most basic features of the environment.
-# It configures the engine, and makes the agent perform random actions.
-# It also gets current state and reward earned with the action.
-# <episodes> number of episodes are played. 
-# Random combination of buttons is chosen for every action.
-# Game variables from state and last reward are printed.
-#
-# To see the scenario description go to "../../scenarios/README.md"
-#####################################################################
-
 from __future__ import print_function
 from vizdoom import *
 
 from random import choice
 from time import sleep
 
-# Create DoomGame instance. It will run the game and communicate with you.
-game = DoomGame()
+import tensorflow as tf
 
-# Now it's time for configuration!
-# load_config could be used to load configuration instead of doing it here with code.
-# If load_config is used in-code configuration will also work - most recent changes will add to previous ones.
-# game.load_config("../../scenarios/basic.cfg")
+resolution = (120,120)
 
-# Sets path to additional resources wad file which is basically your scenario wad.
-# If not specified default maps will be used and it's pretty much useless... unless you want to play good old Doom.
-game.set_doom_scenario_path("./config/basic.wad")
+class VP_Network(object):
+    def __init__(self):
 
-# Sets map to start (scenario .wad files can contain many maps).
-game.set_doom_map("map01")
+        self.testdata = [[10 for i in range(120)] for j in range(120)]
 
-# Sets resolution. Default is 320X240
-game.set_screen_resolution(ScreenResolution.RES_640X480)
+        self.s1_ = tf.plaeceholder(tf.float32,[None] + list(resolution) + [1],name="state")
+        #self.a_ = tf.placeholder(tf.int32, [None],name="partition")
 
-# Sets the screen buffer format. Not used here but now you can change it. Defalut is CRCGCB.
-game.set_screen_format(ScreenFormat.RGB24)
+        self.conv1 = tf.contrib.layers.convolution2d(s1_, num_outputs=60, kernel_size=[3,3],stride[1,1],
+        activation_fn=tf.nn.relu,
+        weights_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+        biases_initializer=tf.constant_initializer(0.1))
+        
+        self.max_pool1 = tf.contrib.layers.max_pool2d(conv1,kernel_size=[2,2])
+        
+        self.conv2 = tf.contrib.layers.convolution2d(max_pool1, num_outputs=60, kernel_size=[3,3],stride[1,1],
+        activation_fn=tf.nn.relu,
+        weights_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+        biases_initializer=tf.constant_initializer(0.1))
+        
+        self.max_pool2 = tf.contrib.layers.max_pool2d(conv2,kernel_size=[2,2])
 
-# Enables depth buffer.
-game.set_depth_buffer_enabled(True)
+        self.fc1 = tf.contrib.layer.fully_connected(max_pool2,num_outputs=40,activation_fn=tf..nn.relu,
+        weights_initializer=tf.contrib.layers.xavier_initializer(),
+        biases_initializer=tf.constant_initializer(0.1))
 
-# Enables labeling of in game objects labeling.
-game.set_labels_buffer_enabled(True)
+        self.fc2 = tf.contrib.layer.fully_connected(fc1,num_outputs=5,activation_fn=tf..nn.relu,
+        weights_initializer=tf.contrib.layers.xavier_initializer(),
+        biases_initializer=tf.constant_initializer(0.1))
 
-# Enables buffer with top down map of the current episode/level.
-game.set_automap_buffer_enabled(True)
+        self.output = tf.contrib.layer.softmax(fc2)
 
-# Sets other rendering options (all of these options except crosshair are enabled (set to True) by default)
-game.set_render_hud(False)
-game.set_render_minimal_hud(False)  # If hud is enabled
-game.set_render_crosshair(False)
-game.set_render_weapon(True)
-game.set_render_decals(False)  # Bullet holes and blood on the walls
-game.set_render_particles(False)
-game.set_render_effects_sprites(False)  # Smoke and blood
-game.set_render_messages(False)  # In-game messages
-game.set_render_corpses(False)
-game.set_render_screen_flashes(True)  # Effect upon taking damage or picking up items
+    def test(self):
+        sess = tf.sess
 
-# Adds buttons that will be allowed. 
-game.add_available_button(Button.MOVE_LEFT)
-game.add_available_button(Button.MOVE_RIGHT)
-game.add_available_button(Button.ATTACK)
+        print(sess.run(self.output,{s1_: self.testdata}))
 
-# Adds game variables that will be included in state.
-game.add_available_game_variable(GameVariable.AMMO2)
 
-# Causes episodes to finish after 200 tics (actions)
-game.set_episode_timeout(200)
+network = VP_Network()
 
-# Makes episodes start after 10 tics (~after raising the weapon)
-game.set_episode_start_time(10)
-
-# Makes the window appear (turned on by default)
-game.set_window_visible(True)
-
-# Turns on the sound. (turned off by default)
-game.set_sound_enabled(True)
-
-# Sets the livin reward (for each move) to -1
-game.set_living_reward(-1)
-
-# Sets ViZDoom mode (PLAYER, ASYNC_PLAYER, SPECTATOR, ASYNC_SPECTATOR, PLAYER mode is default)
-game.set_mode(Mode.PLAYER)
-
-# Enables engine output to console.
-#game.set_console_enabled(True)
-
-# Initialize the game. Further configuration won't take any effect from now on.
-game.init()
-
-# Define some actions. Each list entry corresponds to declared buttons:
-# MOVE_LEFT, MOVE_RIGHT, ATTACK
-# 5 more combinations are naturally possible but only 3 are included for transparency when watching.
-actions = [[True, False, False], [False, True, False], [False, False, True]]
-
-# Run this many episodes
-episodes = 10
-
-# Sets time that will pause the engine after each action (in seconds)
-# Without this everything would go too fast for you to keep track of what's happening.
-sleep_time = 1.0 / DEFAULT_TICRATE # = 0.028
-
-for i in range(episodes):
-    print("Episode #" + str(i + 1))
-
-    # Starts a new episode. It is not needed right after init() but it doesn't cost much. At least the loop is nicer.
-    game.new_episode()
-
-    while not game.is_episode_finished():
-
-        # Gets the state
-        state = game.get_state()
-
-        # Which consists of:
-        n = state.number
-        vars = state.game_variables
-        screen_buf = state.screen_buffer
-        depth_buf = state.depth_buffer
-        labels_buf = state.labels_buffer
-        automap_buf = state.automap_buffer
-        labels = state.labels
-
-        # Makes a random action and get remember reward.
-        r = game.make_action(choice(actions))
-
-        # Makes a "prolonged" action and skip frames:
-        # skiprate = 4
-        # r = game.make_action(choice(actions), skiprate)
-
-        # The same could be achieved with:
-        # game.set_action(choice(actions))
-        # game.advance_action(skiprate)
-        # r = game.get_last_reward()
-
-        # Prints state's game variables and reward.
-        print("State #" + str(n))
-        print("Game variables:", vars)
-        print("Reward:", r)
-        print("=====================")
-
-        if sleep_time > 0:
-            sleep(sleep_time)
-
-    # Check how the episode went.
-    print("Episode finished.")
-    print("Total reward:", game.get_total_reward())
-    print("************************")
-
-# It will be done automatically anyway but sometimes you need to do it in the middle of the program...
-game.close()
+network.test()

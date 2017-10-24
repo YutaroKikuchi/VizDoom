@@ -39,7 +39,7 @@ RUN apt-get install -y python3-dev python3 python3-pip
 RUN pip3 install pip --upgrade
 
 # TensorFlow
-RUN pip3 install tensorflow
+RUN pip3 install tensorflow-gpu
 
 # Sonotano raiburari
 RUN pip3 install matplotlib scipy scikit-image tqdm
@@ -66,9 +66,6 @@ RUN export uid=${HOST_UID} gid=${HOST_GID} && \
     echo "$USER_NAME ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/$USER_NAME && \
     chmod 0440 /etc/sudoers.d/$USER_NAME && \
     chown ${uid}:${gid} -R ${HOME_DIR}
-
-RUN pip3 install tensorflow-gpu
-RUN pip3 install matplotlib scipy scikit-image tqdm
 
 USER ${USER_NAME}
 WORKDIR ${HOME_DIR}

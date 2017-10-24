@@ -36,7 +36,7 @@ RUN apt-get install -y python3-dev python3 python3-pip
 RUN pip3 install pip --upgrade
 
 # TensorFlow
-RUN pip3 install tensorflow-gpu
+RUN pip3 install tensorflow
 
 # Sonotano raiburari
 RUN pip3 install matplotlib scipy scikit-image tqdm
@@ -69,7 +69,7 @@ WORKDIR ${HOME_DIR}
 
 RUN mkdir config
 COPY vision_partition.py .
-COPY vision_partition.ipynb .
+#COPY vision_partition.ipynb .
 COPY config ./config
 COPY jupyter_notebook_config.py .
 

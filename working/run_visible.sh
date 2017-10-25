@@ -7,4 +7,4 @@ fi
 
 DIRECTORY=`basename $1`
 
-docker run -ti --net=host -e DISPLAY=${DISPLAY} --rm --name ${DIRECTORY} ${DIRECTORY}
+docker run -ti --net=host --privileged -e DISPLAY=${DISPLAY} --name ${DIRECTORY} ${DIRECTORY}

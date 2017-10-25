@@ -2,10 +2,10 @@
 
 from __future__ import print_function
 from vizdoom import *
-
+import numpy as np
 from random import choice
 from time import sleep
-
+import skimage.color, skimage.transform
 import tensorflow as tf
 
 resolution = (30,45)
@@ -34,7 +34,7 @@ def initialize_vizdoom(config_file_path):
 class VP_Network(object):
     def __init__(self):
 
-        self.testdata = [[10 for i in range(120)] for j in range(120)]
+        self.testdata = [[[10] for i in range(120)] for j in range(120)]
 
         self.s1_ = tf.placeholder(tf.float32,[None] + list(resolution)+[1],name="state")
         #self.a_ = tf.placeholder(tf.int32, [None],name="partition")
@@ -63,10 +63,11 @@ class VP_Network(object):
 
         self.output = tf.contrib.layers.softmax(self.fc2)
 
-    def test(state):
+    def test(self,state):
         sess = tf.Session()
+        sess.run(tf.global_variables_initializer())
 
-        print(sess.run(self.output,feed_dict={self.s1_: state}))
+        print(sess.run(self.output,feed_dict={self.s1_: state.reshape(1, resolution[0],resolution[1],1)}))
 
 
 network = VP_Network()

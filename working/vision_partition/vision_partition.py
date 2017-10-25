@@ -8,7 +8,28 @@ from time import sleep
 
 import tensorflow as tf
 
-resolution = (120,120)
+resolution = (30,45)
+config_file_path = "./config/simpler_basic.cfg"
+
+# Converts and down-samples the input image
+def preprocess(img):
+    img = skimage.transform.resize(img, resolution)
+    img = img.astype(np.float32)
+    return img
+
+
+# Creates and initializes ViZDoom environment.
+def initialize_vizdoom(config_file_path):
+    print("Initializing doom...")
+    game = DoomGame()
+    game.load_config(config_file_path)
+    game.set_window_visible(False)
+    game.set_mode(Mode.PLAYER)
+    game.set_screen_format(ScreenFormat.GRAY8)
+    game.set_screen_resolution(ScreenResolution.RES_640X480)
+    game.init()
+    print("Doom initialized.")
+    return game
 
 class VP_Network(object):
     def __init__(self):
@@ -42,12 +63,21 @@ class VP_Network(object):
 
         self.output = tf.contrib.layers.softmax(self.fc2)
 
-    def test(self):
+    def test(state):
         sess = tf.Session()
 
-        print(sess.run(self.output,feed_dict={self.s1_: [self.testdata]}))
+        print(sess.run(self.output,feed_dict={self.s1_: state}))
 
 
 network = VP_Network()
 
-network.test()
+game = initialize_vizdoom(config_file_path)
+
+game.new_episode()
+
+state = game.get_state()
+img = preprocess(state.screen_buffer)
+
+network.test(img)
+
+game.close()

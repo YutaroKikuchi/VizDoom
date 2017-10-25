@@ -1,5 +1,7 @@
 FROM ubuntu:16.04
 
+FROM nvidia/cuda:8.0-cudnn6-devel
+
 RUN apt-get update
 RUN apt-get install -y \
     build-essential \
@@ -36,7 +38,7 @@ RUN apt-get install -y python3-dev python3 python3-pip
 RUN pip3 install pip --upgrade
 
 # TensorFlow
-RUN pip3 install tensorflow
+RUN pip3 install tensorflow-gpu
 
 # Sonotano raiburari
 RUN pip3 install matplotlib scipy scikit-image tqdm

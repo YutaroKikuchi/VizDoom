@@ -24,8 +24,6 @@ def initialize_game():
     game.add_available_game_variable(GameVariable.USER1)
     game.add_available_game_variable(GameVariable.USER2)
     game.add_available_game_variable(GameVariable.USER3)
-    game.add_available_game_variable(GameVariable.USER4)
-    game.add_available_game_variable(GameVariable.USER5)
     game.init()
 
     return game
@@ -52,6 +50,14 @@ for i in range(episodes):
         # Gets the state
         state = game.get_state()
 
+        pos_x = game.get_game_variable(GameVariable.USER1)
+        pos_y = game.get_game_variable(GameVariable.USER2)
+        pos_z = game.get_game_variable(GameVariable.USER3)
+
+        pos_x_ = doom_fixed_to_double(pos_x)
+        pos_y = doom_fixed_to_double(pos_y)
+        pos_z = doom_fixed_to_double(pos_z)
+
         # Which consists of:
         n = state.number
         vars = state.game_variables
@@ -76,6 +82,8 @@ for i in range(episodes):
         # Prints state's game variables and reward.
         print("State #" + str(n))
         print("Game variables:", vars)
+        print("X{0}, Y:{0}, X:{0}".format(pos_x_, pos_y, pos_z))
+        print(type(pos_x))
         print("Reward:", r)
         print("=====================")
 

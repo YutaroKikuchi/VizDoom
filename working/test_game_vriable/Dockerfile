@@ -67,15 +67,17 @@ RUN export uid=${HOST_UID} gid=${HOST_GID} && \
 USER ${USER_NAME}
 WORKDIR ${HOME_DIR}
 
-RUN mkdir config
-COPY test_game_variable.py .
-COPY test_game_variable.ipynb .
-COPY config ./config
 COPY jupyter_notebook_config.py .
-
 # notebook can be accesible by remote server
 RUN jupyter notebook --generate-config
 RUN rm ~/.jupyter/jupyter_notebook_config.py
 RUN mv ~/jupyter_notebook_config.py ~/.jupyter/.
+
+RUN mkdir config
+COPY test_game_variable.py .
+COPY test_game_variable.ipynb .
+COPY config ./config
+COPY shaping.py .
+
 
 CMD /bin/bash

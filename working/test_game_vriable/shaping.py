@@ -37,7 +37,7 @@ actions = []
 for perm in it.product([False, True], repeat=actions_num):
     actions.append(list(perm))
 
-episodes = 10
+episodes = 1
 sleep_time = 0.028
 
 for i in range(episodes):
@@ -59,11 +59,13 @@ for i in range(episodes):
 
         # Retrieve the shaping reward
         fixed_shaping_reward = game.get_game_variable(GameVariable.USER1)   # Get value of scripted variable
+        test = game.get_game_variable(GameVariable.USER2)
         shaping_reward = doom_fixed_to_double(fixed_shaping_reward)         # If value is in DoomFixed format project it to double
+        print("shaping_reward:",shaping_reward)
         shaping_reward = shaping_reward - last_total_shaping_reward
         last_total_shaping_reward += shaping_reward
 
-        print("shaping:{0}".format(fixed_shaping_reward))
+        print("test:{0}".format(test))
         print("State #" + str(state.number))
         print("Health: ", state.game_variables[0])
         print("Last Reward:", reward)

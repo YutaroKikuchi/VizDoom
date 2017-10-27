@@ -21,9 +21,9 @@ def initialize_game():
     game = DoomGame()
     game.load_config("./config/basic.cfg")
     game.set_doom_map("map01")
-    game.add_available_game_variable(GameVariable.USER1)
-    game.add_available_game_variable(GameVariable.USER2)
-    game.add_available_game_variable(GameVariable.USER3)
+    #game.add_available_game_variable(GameVariable.USER1)
+    #game.add_available_game_variable(GameVariable.USER2)
+    #game.add_available_game_variable(GameVariable.USER3)
     game.init()
 
     return game
@@ -33,7 +33,7 @@ actions = [[True, False, False], [False, True, False], [False, False, True]]
 game = initialize_game()
 
 # Run this many episodes
-episodes = 3
+episodes = 1
 
 # Sets time that will pause the engine after each action (in seconds)
 # Without this everything would go too fast for you to keep track of what's happening.
@@ -53,6 +53,7 @@ for i in range(episodes):
         pos_x = game.get_game_variable(GameVariable.USER1)
         pos_y = game.get_game_variable(GameVariable.USER2)
         pos_z = game.get_game_variable(GameVariable.USER3)
+        test = game.get_game_variable(GameVariable.USER4)
 
         pos_x_ = doom_fixed_to_double(pos_x)
         pos_y = doom_fixed_to_double(pos_y)
@@ -81,6 +82,7 @@ for i in range(episodes):
 
         # Prints state's game variables and reward.
         print("State #" + str(n))
+        print("test:",test)
         print("Game variables:", vars)
         print("X{0}, Y:{0}, X:{0}".format(pos_x_, pos_y, pos_z))
         print(type(pos_x))

@@ -89,5 +89,14 @@ COPY chaintest.py .
 COPY chaintest2.py .
 COPY img_six.png .
 COPY img_un.png .
+COPY mnist_one.png .
+COPY mnist_eight.png .
+COPY invert_one.png .
+COPY invert_eight.png .
+COPY invert_six.png .
+COPY c_onec.png .
+COPY c_sevenc.png .
+COPY c_threec.png .
+COPY c_sixc.png .
 
 CMD /bin/bash

@@ -10,6 +10,7 @@ import time
 import os
 import numpy as np
 import six
+import matplotlib.pyplot as plt
  
 import chainer
 import chainer.functions as F
@@ -157,15 +158,137 @@ def main():
     serializers.save_npz('{}/mlp.state'.format(out), optimizer)
     
     print("----begin end------")
-    img = Image.open('img_six.png') #.convert('RGBA')
+    
+    #print(flat_arr.astype(np.float32)/255)
+    #print(flat_arr.astype(np.float32)[0])
+    #print(flat_arr.astype(np.float32)[1])
+    #print(len(flat_arr.astype(np.float32)))
+    #print("test from database mnist")
+    #x = chainer.Variable(xp.asarray(train[0][0]))
+    #print(classifier_model(x))
+     
+    
+    def predict(model, x_test):
+        x = chainer.Variable(x_test)
+
+        #h1 = F.dropout(F.relu(model.predictor.l1(x)))
+        #h2 = F.dropout(F.relu(model.predictor.l2(h1)))
+        #y = model.predictor.l3(h2)
+        y = model.predictor(x)
+        print(y.data)
+        return np.argmax(y.data)
+
+    modelUsed = L.Classifier(model)
+    
+    # testing 3 images, they are inverted which means that the backgroud is black and ink white
+    # it doesn t seem to work when it is the other way around (probably because of the training images, didn t check)
+    
+    print("should be one - invert") # works, comes from database mnist
+    img = Image.open('invert_one.png').convert('L') #.convert('RGBA')
     arr = np.array(img)
-
     flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
+    
+    print("should be eight - invert") # works, comes from database mnist
+    img = Image.open('invert_eight.png').convert('L') #.convert('RGBA')
+    arr = np.array(img)
+    flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
+    
+    print("should be six - invert") # doesn t really work because of pencil thickness that is different
+    img = Image.open('invert_six.png').convert('L') #.convert('RGBA')
+    arr = np.array(img)
+    flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
+    
+    print("should be six - c invert") # custom number with right pencil thickness - ok
+    img = Image.open('c_sixc.png').convert('L') #.convert('RGBA')
+    arr = np.array(img)
+    flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
+    
+    print("should be seven - c invert") # custom number with right pencil thickness - doesn t work, looks like a 2
+    arr = np.array(img)
+    flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
+    
+    print("should be one - c invert") # custom number with right pencil thickness - ok
+    img = Image.open('c_onec.png').convert('L') #.convert('RGBA')
+    arr = np.array(img)
+    flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
+    
+    print("should be three - c invert") # custom number with right pencil thickness - ok
+    img = Image.open('c_threec.png').convert('L') #.convert('RGBA')
+    arr = np.array(img)
+    flat_arr = arr.ravel()
+    toscan = flat_arr.astype(np.float32)/255
+    print(type(toscan))
+    print(type(toscan[0]))
+    print(type(train[0][0]))
+    print(type(train[0][0][0]))
+    x = chainer.Variable(toscan)
+    toscan= toscan.reshape(28* 28)
+    toscanUsed = np.array([toscan], dtype=np.float32)
+    print(predict(modelUsed, toscanUsed))
+    print(predict(modelUsed, toscanUsed))
 
-    print(flat_arr.astype(np.float))
-    print(flat_arr.astype(np.float)[0])
-    print(flat_arr.astype(np.float)[1])
-    print(len(flat_arr.astype(np.float)))
+    
+    #print(classifier_model(x))
     print("-------------------")
  
 if __name__ == '__main__':

@@ -54,6 +54,13 @@ RUN pip3 install jupyter
 # chainer
 RUN pip3 install chainer
 
+# chainerRl for deep q learning
+RUN pip3 install chainerrl
+
+# gym for chainerrl example
+RUN pip3 install gym
+RUN pip3 install gym[atari]
+
 # matplotlib
 RUN pip3 install matplotlib
 
@@ -85,8 +92,18 @@ USER ${USER_NAME}
 WORKDIR ${HOME_DIR}
 
 RUN mkdir config
+# python files
 COPY chaintest.py .
 COPY chaintest2.py .
+COPY chaintest3.py .
+COPY chaintrain3.py .
+COPY chainrltuto.py .
+COPY chainrltuto2.py .
+
+# doom map
+COPY config ./config
+
+# pictures
 COPY img_six.png .
 COPY img_un.png .
 COPY mnist_one.png .

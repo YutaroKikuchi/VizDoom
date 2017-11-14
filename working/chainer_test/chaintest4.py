@@ -201,7 +201,7 @@ for i in range(1, n_episodes + 1):
     R = 0
 
     while not done:
-        action = agent.act_and_train(obs, 0)
+        action = agent.act(obs)
         #action = agent.act_and_train(obs, reward)
         #action = agent.act(obs)
         obs, reward, done, _ = env.step(action)

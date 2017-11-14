@@ -97,6 +97,7 @@ COPY chaintest.py .
 COPY chaintest2.py .
 COPY chaintest3.py .
 COPY chaintrain3.py .
+COPY chaintest4.py .
 COPY chainrltuto.py .
 COPY chainrltuto2.py .
 

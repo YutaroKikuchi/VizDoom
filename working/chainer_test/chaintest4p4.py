@@ -108,7 +108,7 @@ class DOOM_ENV(env.Env):
         return len(self.legal_actions)
 
     def receive_action(self, action):
-        self._reward = self.game.make_action(self.legal_actions[action], tics = 10) # do an action every 10 frames
+        self._reward = self.game.make_action(self.legal_actions[action], 10) # do an action every 10 frames
         return self._reward
 
     def initialize(self):
@@ -144,7 +144,7 @@ class DOOM_ENV(env.Env):
 env = DOOM_ENV()
 obs = env.reset()
 
-"""
+
 class QFunction(chainer.Chain):
     def __init__(self, n_history=1, n_action=3):
         super().__init__(
@@ -164,12 +164,12 @@ class QFunction(chainer.Chain):
         h5 = self.out(h4)
         return chainerrl.action_value.DiscreteActionValue(h5)
 
-"""
 
-obs_size = 80*80
+
+obs_size = 1 #80*80
 n_actions = 3
     
-
+"""
 class QFunction(chainer.Chain):
     def __init__(self, obs_size, n_actions, n_hidden_channels=50):
         #super(QFunction, self).__init__(##python2.x用
@@ -182,7 +182,7 @@ class QFunction(chainer.Chain):
         h = F.tanh(self.l0(x)) #活性化関数は自分で書くの？
         h = F.tanh(self.l1(h))
         return chainerrl.action_value.DiscreteActionValue(self.l2(h))
-
+"""
 
 
     
@@ -287,20 +287,22 @@ for i in range(1, n_episodes + 1):
         filename = 'agent_Breakout' + str(i)
         agent.save(filename)
     
-    gra = plt.plot(total_reward)
-    gra.set_ylabel('rewards per episode')
-    gra.savefig("graph_epoch_"+ i +".png")
+    #plt.plot(total_reward)
+    #plt.savefig("graph_epoch_"+ str(i) +".png")
+    #plt.show()
     
-    all_rewards +=total_reward
+    all_rewards=all_rewards + list(total_reward)
     
 print('Finished. Now testing')
 
 print("demo starts")
 #agent.load(filename)
 
-gra = plt.plot(all_rewards)
-gra.set_ylabel('rewards per episode')
-gra.savefig("graph_epoch_"+ "all" +".png")
+all_rewards = np.array(all_rewards)
+print(type(all_rewards))
+plt.plot(all_rewards)
+plt.savefig("graph_epoch_"+ "all" +".png")
+plt.show()
 
 env.set_window(True)
 for i in range(20):

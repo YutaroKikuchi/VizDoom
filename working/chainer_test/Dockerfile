@@ -98,23 +98,26 @@ COPY chaintest2.py .
 COPY chaintest3.py .
 COPY chaintrain3.py .
 COPY chaintest4.py .
+COPY chaintest4p4.py .
+COPY chaintest5.py .
 COPY chainrltuto.py .
 COPY chainrltuto2.py .
+COPY chaintestmodel5 ./chaintestmodel5
 
 # doom map
 COPY config ./config
 
 # pictures
-COPY img_six.png .
-COPY img_un.png .
-COPY mnist_one.png .
-COPY mnist_eight.png .
-COPY invert_one.png .
-COPY invert_eight.png .
-COPY invert_six.png .
-COPY c_onec.png .
-COPY c_sevenc.png .
-COPY c_threec.png .
-COPY c_sixc.png .
+#COPY img_six.png .
+#COPY img_un.png .
+#COPY mnist_one.png .
+#COPY mnist_eight.png .
+#COPY invert_one.png .
+#COPY invert_eight.png .
+#COPY invert_six.png .
+#COPY c_onec.png .
+#COPY c_sevenc.png .
+#COPY c_threec.png .
+#COPY c_sixc.png .
 
 CMD /bin/bash

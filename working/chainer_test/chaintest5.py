@@ -22,9 +22,9 @@ def run(submit_key, gpu):
     if submit_key:
         print("make directory to submit result")
         path = os.path.join(os.path.dirname(__file__), "submit")
-    episode = 200
+    epochsnb = 20
 
-    for ep, s, r in env.play(agent, epochs=episode, render=True, action_interval=4, record_path=path):
+    for ep, s, r in env.play(agent, epochs=epochsnb, render=True, action_interval=4, record_path=path):
         pass
     
     #if submit_key:
@@ -36,7 +36,7 @@ def train(render, gpu):
     agent = DQNAgent(env.actions, epsilon=0.5, model_path=PATH, on_gpu=gpu)
     trainer = DQNTrainer(agent)
 
-    for ep, s, r in env.play(trainer, epochs=1000, render=render, report_interval=10, action_interval=4):
+    for ep, s, r in env.play(trainer, epochs=20, render=render, report_interval=10, action_interval=4):
         pass
 
 train(True, False)

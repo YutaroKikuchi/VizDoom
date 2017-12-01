@@ -89,10 +89,13 @@ class Environment(env.Env):
         scores = []
         self.set_window(render)
 
+        epoch_len = 1000
+        
         all_rewards=[]
         all_means=[]
         
         for i in range(epochs):
+            print("Epoch nb " + str(i))
             observation = self.reset()
             done = False
             reward = 0.0
@@ -100,8 +103,9 @@ class Environment(env.Env):
             score = 0.0
             continue_game = True
             last_action = 0
-            while continue_game:
-                
+            scores = []
+            while step_count<epoch_len:
+
                 if step_count == 0:
                     action = agent.start(observation)
                 else:
@@ -121,17 +125,18 @@ class Environment(env.Env):
                 continue_game = not done
                 score += reward
                 step_count += 1
-
-            scores.append(score)
+                
+                if((not continue_game) or (step_count+1==epoch_len)):
+                    scores.append(score)
+                    score = 0
+                    observation = self.reset()
+                    continue_game = True
             
-            if report_interval > 0 and i % report_interval == 0:
-                print("average score is {0}.".format(sum(scores) / len(scores)))
-                all_means.append(sum(scores) / len(scores))
-                report = agent.report(i)
-                if report:
-                    print(report)
-                all_rewards = all_rewards + scores
-                scores = []
+            print("average score is {0}.".format(sum(scores) / len(scores)))
+            all_means.append(sum(scores) / len(scores))
+            report = agent.report(i)
+            all_rewards = all_rewards + scores
+                
 
             
         all_rewards = np.array(all_rewards)
@@ -169,10 +174,7 @@ class Environment(env.Env):
     @property
     def is_terminal(self):
         if self.game.is_episode_finished():
-            print("finished because game is")
             return True
-        if(self.frame == self.episode_len-1):
-            print("finished because last frame")
         return self.frame == self.episode_len-1
 
     @property

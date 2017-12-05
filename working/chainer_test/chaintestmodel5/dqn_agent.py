@@ -51,17 +51,17 @@ class Q(Chain):
         h1 = F.relu(self.l1(s))
         
         if show:
-            self.show_convolution(h1)
+            self.show_convolutions(h1)
         
         h2 = F.relu(self.l2(h1))
         
         if show:
-            self.show_convolution(h2)
+            self.show_convolutions(h2)
         
         h3 = F.relu(self.l3(h2))
         
         if show:
-            self.show_convolution(h3)
+            self.show_convolutions(h3)
         
         h4 = F.relu(self.l4(h3))
         #hlstm = F.relu(self.lstm(h4))
@@ -90,6 +90,38 @@ class Q(Chain):
         titless = plt.title('convolution of size '+str(len(h1mod[xi][yj]))+"x"+str(len(h1mod[xi][yj][j])))
         #plt.getp(titless)
         plt.show()
+        
+    def show_convolutions(self, big_array):
+            # the big_array is of dtype=object and is filled with Variable type
+            # we need to convert into dtype=float filled with float type in order to show the image
+            h1mod = np.asarray(big_array)
+            for xi in range(len(h1mod)):
+                for k in range(len(h1mod[xi])):
+                    for j in range(len(h1mod[xi][k])):
+                        for i in range(len(h1mod[xi][k][j])) :
+                            ad = h1mod[xi][k][j]
+                            advalue = ad[i].array
+                            h1mod[xi][k][j][i] = np.float32(advalue.item())
+            h1float = np.ndarray(shape=(len(h1mod),len(h1mod[0]), len(h1mod[0][0]),len(h1mod[0][0][0])), dtype=float)
+            for xi in range(len(h1mod)):
+                for k in range(len(h1mod[xi])):
+                    for j in range(len(h1mod[xi][k])):
+                        for i in range(len(h1mod[xi][k][j])) :
+                            ad = h1mod[xi][k][j]
+                            h1float[xi][k][j][i] = np.float(ad[i])
+                            
+            fig = plt.figure()
+            rows=7
+            columns=len(h1mod[xi])/7+1
+            #for xi in range(len(h1mod)):
+            xi=0
+            for k in range(len(h1mod[xi])):
+                if k+1<rows*columns:
+                    fig.add_subplot(rows,columns,k+1)
+                    plt.imshow(h1float[xi][k], interpolation='nearest')
+            titless = plt.title('convolution of size '+str(len(h1mod[0][0]))+"x"+str(len(h1mod[0][0][j])))
+            #plt.getp(titless)
+            plt.show()
 
 
 class DQNAgent(Agent):

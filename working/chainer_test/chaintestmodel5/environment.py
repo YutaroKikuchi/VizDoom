@@ -32,7 +32,9 @@ save_every = 5
 
 class Environment(env.Env):
 
-    def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=True):
+    def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=True, show_frames =False):
+        # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
+        self.show_frames=show_frames
         self.game = DoomGame()
         self.game.set_doom_scenario_path(scenario)
         self.game.set_doom_map(dmap)
@@ -110,7 +112,7 @@ class Environment(env.Env):
                     action = agent.start(observation)
                 else:
                     if step_count % action_interval == 0 or reward != 0:
-                        action = agent.act(observation, reward)
+                        action = agent.act(observation, reward, framefirstorlast=(self.show_frames and (step_count==1 or step_count==epoch_len-1)))
                     else:
                         action = last_action
 
@@ -215,154 +217,3 @@ class Environment(env.Env):
 
     def close(self):
         pass
-
-
-#---------------------------------------------------------------------------
-"""
-env = Environment()
-obs = env.reset()
-
-class QFunction(chainer.Chain):
-    def __init__(self, n_history=1, n_action=3):
-        super().__init__(
-            l1=L.Convolution2D(n_history, 32, ksize=8, stride=4, nobias=False),
-            l2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False),
-            l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False),
-            l4=L.Linear(3136, 512),
-            out=L.Linear(512, n_action, initialW=np.zeros((n_action, 512), dtype=np.float32))
-        )
-
-    def __call__(self, x, test=False):
-        s = chainer.Variable(x)
-        h1 = F.relu(self.l1(s))
-        h2 = F.relu(self.l2(h1))
-        h3 = F.relu(self.l3(h2))
-        h4 = F.relu(self.l4(h3))
-        h5 = self.out(h4)
-        return chainerrl.action_value.DiscreteActionValue(h5)
-
-n_action = env.number_of_actions
-print("n action size obs")
-print(n_action)
-n_history=1
-q_func = QFunction(n_history, n_action)
-
-optimizer = chainer.optimizers.Adam(eps=1e-2)#1e-2
-optimizer.setup(q_func)
-
-gamma = 0.95
-
-explorer = chainerrl.explorers.ConstantEpsilonGreedy(
-    epsilon=0.3, random_action_func=env.random_action_doom)
-
-replay_buffer = chainerrl.replay_buffer.ReplayBuffer(capacity=10 ** 11)
-
-phi = lambda x: x.astype(np.float32, copy=False)
-
-agent = chainerrl.agents.DoubleDQN(
-    q_func, optimizer, replay_buffer, gamma, explorer,
-    #minibatch_size=4, n_times_update=1, replay_start_size=50, target_update_interval=100,
-     phi=phi)
-
-
-env.set_window(True)
-
-
-for i in range(1, 1 + 1):
-    obs = env.reset()
-    #obs = resize(rgb2gray(env.reset()),(80,80))
-    #obs = obs[np.newaxis, :, :]
-
-    reward = 0
-    done = False
-    R = 0
-
-    while not done:
-        action = agent.act(obs)
-        #action = agent.act_and_train(obs, reward)
-        #action = agent.act(obs)
-        obs, reward, done, _ = env.step(action)
-        #obs = resize(rgb2gray(obs), (80, 80))
-        #obs = obs[np.newaxis, :, :]
-
-
-    agent.stop_episode()
-
-
-last_time = datetime.datetime.now()
-
-filename = "toreplace"
-env.set_window(False)
-
-
-print("Starting the training!")
-all_rewards = []
-all_means = []
-
-for epoch in range(n_epochs):
-    print("\nEpoch %d\n-------" % (epoch + 1))
-    train_episodes_finished = 0
-    train_scores = []
-    reward = 0
-    done = False
-
-    print("Training...")
-    obs = env.reset()
-    for learning_step in trange(epoch_len, leave=False):
-        action = agent.act_and_train(obs, reward)
-        obs, reward, done, _ = env.step(action)
-        if done:
-            score = env.get_total_score()
-            train_scores.append(score)
-            obs = env.reset()
-            train_episodes_finished += 1
-
-    print("%d training episodes played." % train_episodes_finished)
-    
-    train_scores = np.array(train_scores)
-    
-    all_rewards = all_rewards + list(train_scores)
-    
-    agent.stop_episode_and_train(obs, score, done)
-    print("Results: mean :",train_scores.mean()," plusminus " ,train_scores.std(), "min: ", train_scores.min(), "max: ", train_scores.max())
-    all_means.append(train_scores.mean())
-
-    print("\nTesting...")
-    test_episode = []
-    test_scores = []
-    for test_episode in trange(test_epoch_len, leave=False):
-        done = False
-        obs = env.reset()
-        while not done:
-            action = agent.act(obs)
-            obs, reward, done, _ = env.step(action)
-        r = env.get_total_score()
-        test_scores.append(r)
-        agent.stop_episode()
-
-    test_scores = np.array(test_scores)
-    #all_rewards = all_rewards + list(test_scores)
-    print("Results: mean :",test_scores.mean()," plusminus " ,test_scores.std(), "min: ", test_scores.min(), "max: ", test_scores.max())
-
-    #print("Saving the network weigths to:", model_savefile)
-    #saver.save(session, model_savefile)
-
-    print("Total elapsed time: ", ((datetime.datetime.now() - last_time) / 60.0), " minutes")
-
-
-print("======================================")
-print("Training finished. It's time to watch!")
-
-all_rewards = np.array(all_rewards)
-print(type(all_rewards))
-plt.plot(all_rewards)
-plt.savefig("graph_epoch_"+ "all" +".png")
-plt.show()
-
-
-all_means = np.array(all_means)
-print(type(all_means))
-plt.plot(all_means)
-plt.savefig("graph_epoch_"+ "allmeans" +".png")
-plt.show()
-"""

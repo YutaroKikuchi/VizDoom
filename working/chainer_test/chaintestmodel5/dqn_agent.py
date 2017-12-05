@@ -13,6 +13,8 @@ import chainer.initializers as I
 from skimage.color import rgb2gray
 from skimage.transform import resize
 
+import matplotlib.pyplot as plt
+
 class Q(Chain):
     """
     You want to optimize this function to determine the action from state (state is represented by CNN vector)
@@ -30,23 +32,64 @@ class Q(Chain):
             l2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False, initialW=I.HeNormal(np.sqrt(2) / np.sqrt(2))),
             l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
             l4=L.Linear(3136, 512, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
+            #lstm = L.LSTM(512, 250),
             out=L.Linear(512, self.n_action, initialW=np.zeros((n_action, 512), dtype=np.float32))
         )
         if on_gpu:
             self.to_gpu()
-    
-    def __call__(self, state: np.ndarray):
+
+    def __call__(self, state: np.ndarray, show=False):
+        if show:
+            #print("ZAWARUDO")
+            plt.imshow(state[0][0], interpolation='nearest')
+            titless = plt.title('resized frame 80x80')
+            #plt.getp(titless)
+            plt.show()
+        
         _state = self.arr_to_gpu(state)
         s = Variable(_state)
         h1 = F.relu(self.l1(s))
+        
+        if show:
+            self.show_convolution(h1)
+        
         h2 = F.relu(self.l2(h1))
+        
+        if show:
+            self.show_convolution(h2)
+        
         h3 = F.relu(self.l3(h2))
+        
+        if show:
+            self.show_convolution(h3)
+        
         h4 = F.relu(self.l4(h3))
+        #hlstm = F.relu(self.lstm(h4))
         q_value = self.out(h4)
         return q_value
     
     def arr_to_gpu(self, arr):
         return arr if not self.on_gpu else cuda.to_gpu(arr)
+    
+    def show_convolution(self, big_array, xi=0, yj=0):
+        # the big_array is of dtype=object and is filled with Variable type
+        # we need to convert into dtype=float filled with float type in order to show the image
+        h1mod = np.asarray(big_array)
+        for k in range(len(h1mod[xi])):
+            for j in range(len(h1mod[xi][k])):
+                for i in range(len(h1mod[xi][k][j])) :
+                    ad = h1mod[xi][k][j]
+                    advalue = ad[i].array
+                    h1mod[xi][k][j][i] = np.float32(advalue.item())
+        h1float = np.ndarray(shape=(len(h1mod[xi][yj]),len(h1mod[xi][yj][j])), dtype=float)
+        for j in range(len(h1mod[xi][yj])):
+            for i in range(len(h1mod[xi][yj][j])) :
+                ad = h1mod[xi][yj][j]
+                h1float[j][i] = np.float(ad[i])
+        plt.imshow(h1float, interpolation='nearest')
+        titless = plt.title('convolution of size '+str(len(h1mod[xi][yj]))+"x"+str(len(h1mod[xi][yj][j])))
+        #plt.getp(titless)
+        plt.show()
 
 
 class DQNAgent(Agent):
@@ -73,7 +116,7 @@ class DQNAgent(Agent):
     
     def _update_state(self, observation):
         formatted = self._format(observation)
-        state = np.maximum(formatted, self._observations[0])#[0]  ___ operands could not be broadcast together with shapes (0,40) (80,80) ____
+        state = np.maximum(formatted, self._observations[0])
         self._state.append(state)
         if len(self._state) > self.q.n_history:
             self._state.pop(0)
@@ -82,7 +125,11 @@ class DQNAgent(Agent):
     @classmethod
     def _format(cls, image):
         """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
-        im = resize(rgb2gray(image), (80, 80))
+        #im = resize(rgb2gray(image), (80, 80))
+        im = image[0]
+        #print(im)
+        #plt.imshow(im, interpolation='nearest')
+        #plt.show()
         return im.astype(np.float32)
 
     def start(self, observation):
@@ -96,10 +143,11 @@ class DQNAgent(Agent):
         action = self.act(observation, 0)
         return action
     
-    def act(self, observation, reward):
+    def act(self, observation, reward, framefirstorlast=False):
         o = self._update_state(observation)
         s = self.get_state()
-        qv = self.q(np.array([s])) # batch size = 1
+        #TODO : show first and last
+        qv = self.q(np.array([s]), framefirstorlast) # batch size = 1
 
         if np.random.rand() < self.epsilon:
             action = np.random.randint(0, len(self.actions))

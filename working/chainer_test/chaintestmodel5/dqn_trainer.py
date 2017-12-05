@@ -81,23 +81,23 @@ class DQNTrainer(Agent):
     def start(self, observation):
         return self.agent.start(observation)
     
-    def act(self, observation, reward):
+    def act(self, observation, reward, framefirstorlast=False):
         if self.initial_exploration <= self._step:
             self.agent.epsilon -= 1.0/10**6
             if self.agent.epsilon < self.minimum_epsilon:
                 self.agent.epsilon = self.minimum_epsilon
         
-        return self.train(observation, reward, episode_end=False)
+        return self.train(observation, reward, episode_end=False, framefirstorlast=framefirstorlast)
 
     def end(self, observation, reward):
         self.train(observation, reward, episode_end=True)
 
-    def train(self, observation, reward, episode_end):
+    def train(self, observation, reward, episode_end, framefirstorlast=False):
         action = 0
         last_state = self.agent.get_state()
         last_action = self.agent.last_action
         if not episode_end:
-            action = self.agent.act(observation, reward)
+            action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast)
             result_state = self.agent.get_state()
             self.memorize(
                 last_state, 

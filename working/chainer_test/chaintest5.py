@@ -32,11 +32,11 @@ def run(submit_key, gpu):
 
 
 def train(render, gpu):
-    env = Environment()
+    env = Environment(show_frames=True) # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
     agent = DQNAgent(env.actions, epsilon=0.5, model_path=PATH, on_gpu=gpu)
     trainer = DQNTrainer(agent)
 
-    for ep, s, r in env.play(trainer, epochs=20, render=render, report_interval=10, action_interval=4):
+    for ep, s, r in env.play(trainer, epochs=20, render=render, report_interval=20, action_interval=4):
         pass
 
 train(True, False)

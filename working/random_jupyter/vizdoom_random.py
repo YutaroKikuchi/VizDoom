@@ -10,7 +10,6 @@
 #
 # To see the scenario description go to "../../scenarios/README.md"
 #####################################################################
-
 from __future__ import print_function
 from vizdoom import *
 

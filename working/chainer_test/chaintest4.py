@@ -16,13 +16,15 @@ import gym
 import numpy as np
 import math
 
+import matplotlib.pyplot as plt
+
 from tqdm import trange
 
 from skimage.color import rgb2gray
 from skimage.transform import resize
 
-n_epochs = 4
-epoch_len = 500
+n_epochs = 20
+epoch_len = 1000
 test_epoch_len =8
 save_every = 5
 
@@ -107,7 +109,7 @@ class DOOM_ENV(env.Env):
         return len(self.legal_actions)
 
     def receive_action(self, action):
-        self._reward = self.game.make_action(self.legal_actions[action])
+        self._reward = self.game.make_action(self.legal_actions[action], 10)
         return self._reward
 
     def initialize(self):
@@ -217,6 +219,8 @@ env.set_window(False)
 
 
 print("Starting the training!")
+all_rewards = []
+all_means = []
 
 for epoch in range(n_epochs):
     print("\nEpoch %d\n-------" % (epoch + 1))
@@ -237,10 +241,14 @@ for epoch in range(n_epochs):
             train_episodes_finished += 1
 
     print("%d training episodes played." % train_episodes_finished)
-
+    
     train_scores = np.array(train_scores)
+    
+    all_rewards = all_rewards + list(train_scores)
+    
     agent.stop_episode_and_train(obs, score, done)
     print("Results: mean :",train_scores.mean()," plusminus " ,train_scores.std(), "min: ", train_scores.min(), "max: ", train_scores.max())
+    all_means.append(train_scores.mean())
 
     print("\nTesting...")
     test_episode = []
@@ -256,6 +264,7 @@ for epoch in range(n_epochs):
         agent.stop_episode()
 
     test_scores = np.array(test_scores)
+    #all_rewards = all_rewards + list(test_scores)
     print("Results: mean :",test_scores.mean()," plusminus " ,test_scores.std(), "min: ", test_scores.min(), "max: ", test_scores.max())
 
     #print("Saving the network weigths to:", model_savefile)
@@ -267,6 +276,18 @@ for epoch in range(n_epochs):
 print("======================================")
 print("Training finished. It's time to watch!")
 
+all_rewards = np.array(all_rewards)
+print(type(all_rewards))
+plt.plot(all_rewards)
+plt.savefig("graph_epoch_"+ "all" +".png")
+plt.show()
+
+
+all_means = np.array(all_means)
+print(type(all_means))
+plt.plot(all_means)
+plt.savefig("graph_epoch_"+ "allmeans" +".png")
+plt.show()
 
 """
 

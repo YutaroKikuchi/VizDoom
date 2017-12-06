@@ -150,8 +150,8 @@ class QFunction(chainer.Chain):
         super().__init__(
             l1=L.Convolution2D(n_history, 32, ksize=8, stride=4, nobias=False),
             l2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False),
-            l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False),
-            l4=L.Linear(3136, 512),
+            #l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False),
+            l4=L.Linear(5184, 512),#3136
             out=L.Linear(512, n_action, initialW=np.zeros((n_action, 512), dtype=np.float32))
         )
 
@@ -159,8 +159,8 @@ class QFunction(chainer.Chain):
         s = chainer.Variable(x)
         h1 = F.relu(self.l1(s))
         h2 = F.relu(self.l2(h1))
-        h3 = F.relu(self.l3(h2))
-        h4 = F.relu(self.l4(h3))
+        #h3 = F.relu(self.l3(h2))
+        h4 = F.relu(self.l4(h2))#(h3)
         h5 = self.out(h4)
         return chainerrl.action_value.DiscreteActionValue(h5)
 
@@ -199,7 +199,7 @@ optimizer.setup(q_func)
 gamma = 0.95
 
 explorer = chainerrl.explorers.ConstantEpsilonGreedy(
-    epsilon=0.3, random_action_func=env.random_action_doom)#epsilon 1.0 better ?!
+    epsilon=0.3, random_action_func=env.random_action_doom)#epsilon 1.0 better ?!0.3
 
 replay_buffer = chainerrl.replay_buffer.ReplayBuffer(capacity=10 ** 6)
 

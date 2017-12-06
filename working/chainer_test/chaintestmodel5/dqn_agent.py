@@ -32,7 +32,7 @@ class Q(Chain):
             l2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False, initialW=I.HeNormal(np.sqrt(2) / np.sqrt(2))),
             l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
             l4=L.Linear(3136, 512, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
-            #lstm = L.LSTM(512, 250),
+            #lstm = L.LSTM(3136, 3136),
             out=L.Linear(512, self.n_action, initialW=np.zeros((n_action, 512), dtype=np.float32))
         )
         if on_gpu:
@@ -41,7 +41,7 @@ class Q(Chain):
     def __call__(self, state: np.ndarray, show=False):
         if show:
             #print("ZAWARUDO")
-            plt.imshow(state[0][0], interpolation='nearest')
+            plt.imshow(state[0][0], interpolation='nearest', cmap='gray')
             titless = plt.title('resized frame 80x80')
             #plt.getp(titless)
             plt.show()
@@ -63,6 +63,8 @@ class Q(Chain):
         if show:
             self.show_convolutions(h3)
         
+        #hlstm = F.relu(self.lstm(h3))
+        #h4 = F.relu(self.l4(hlstm))
         h4 = F.relu(self.l4(h3))
         #hlstm = F.relu(self.lstm(h4))
         q_value = self.out(h4)
@@ -118,7 +120,7 @@ class Q(Chain):
             for k in range(len(h1mod[xi])):
                 if k+1<rows*columns:
                     fig.add_subplot(rows,columns,k+1)
-                    plt.imshow(h1float[xi][k], interpolation='nearest')
+                    plt.imshow(h1float[xi][k], interpolation='nearest', cmap='gray')
             titless = plt.title('convolution of size '+str(len(h1mod[0][0]))+"x"+str(len(h1mod[0][0][j])))
             #plt.getp(titless)
             plt.show()

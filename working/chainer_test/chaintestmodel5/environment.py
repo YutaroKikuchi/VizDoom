@@ -24,7 +24,7 @@ from tqdm import trange
 from skimage.color import rgb2gray
 from skimage.transform import resize
 
-n_epochs = 10 #20
+n_epochs = 20 #20
 epoch_len = 1000
 test_epoch_len =8
 save_every = 5
@@ -39,10 +39,10 @@ class Environment(env.Env):
         self.game.set_doom_scenario_path(scenario)
         self.game.set_doom_map(dmap)
         self.game.set_screen_resolution(ScreenResolution.RES_640X480)
-        self.game.set_screen_format(ScreenFormat.RGB24)
-        self.game.set_depth_buffer_enabled(True)
-        self.game.set_labels_buffer_enabled(True)
-        self.game.set_automap_buffer_enabled(True)
+        self.game.set_screen_format(ScreenFormat.GRAY8) #GRAY8 RGB24
+        self.game.set_depth_buffer_enabled(False)
+        self.game.set_labels_buffer_enabled(False)
+        self.game.set_automap_buffer_enabled(False)
         self.game.set_render_hud(False)
         self.game.set_render_minimal_hud(False)  # If hud is enabled
         self.game.set_render_crosshair(False)
@@ -78,12 +78,12 @@ class Environment(env.Env):
             [one_screen_observation_space] * n_last_screens)
         
         self.episode_len = episode_len
-        obs = resize(rgb2gray(self.game.get_state().screen_buffer), (80, 80))
+        obs = resize(self.game.get_state().screen_buffer, (80, 80))
         obs = obs[np.newaxis, :, :]
         self.current_screen = obs
         
         # adapt to other example
-        self.env = self.game
+        #self.env = self.game
         self.actions = self.legal_actions
         
     # TODO: modify this part
@@ -112,11 +112,12 @@ class Environment(env.Env):
                     action = agent.start(observation)
                 else:
                     if step_count % action_interval == 0 or reward != 0:
-                        action = agent.act(observation, reward, framefirstorlast=(self.show_frames and (step_count==1 or step_count==epoch_len-1)))
+                        action = agent.act(observation, reward, framefirstorlast=(self.show_frames and (step_count==epoch_len-1))) # step_count==1 or
                     else:
                         action = last_action
 
                 observation, reward, done, info = self.step(action)
+                
                 last_action = action
 
                 if done:
@@ -154,19 +155,27 @@ class Environment(env.Env):
         plt.savefig("graph_epoch_"+ "allmeans" +".png")
         plt.show()
             
-            
-            
-            
 
 
     @property
     def state(self):
+        #print(self.game.get_screen_format())
+        
         if self.game.is_episode_finished():
             return self.current_screen
         rr = self.game.get_state()
-        obs = resize(rgb2gray(rr.screen_buffer), (80, 80))
+        
+        #obs=rr.screen_buffer
+        obs = resize(rr.screen_buffer, (80, 80))
+        #print(obs)
+        render = obs
         obs = obs[np.newaxis, :, :]
         self.current_screen = obs
+        
+        #plt.imshow(render)
+        #titless = plt.title('just check')
+        #plt.show()
+        
         return obs
 
     def random_action_doom(self,nothing=0) :

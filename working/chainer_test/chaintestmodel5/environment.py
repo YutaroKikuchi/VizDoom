@@ -24,11 +24,6 @@ from tqdm import trange
 from skimage.color import rgb2gray
 from skimage.transform import resize
 
-n_epochs = 20 #20
-epoch_len = 1000
-test_epoch_len =8
-save_every = 5
-
 
 class Environment(env.Env):
 

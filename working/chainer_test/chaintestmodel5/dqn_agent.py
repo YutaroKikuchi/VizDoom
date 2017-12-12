@@ -32,43 +32,112 @@ class Q(Chain):
             l2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False, initialW=I.HeNormal(np.sqrt(2) / np.sqrt(2))),
             l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
             l4=L.Linear(3136, 512, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
-            #lstm = L.LSTM(3136, 3136),
+            lstm = L.LSTM(3136, 3136),
             out=L.Linear(512, self.n_action, initialW=np.zeros((n_action, 512), dtype=np.float32))
         )
         if on_gpu:
             self.to_gpu()
-
+    """        
     def __call__(self, state: np.ndarray, show=False):
+
         if show:
             #print("ZAWARUDO")
             plt.imshow(state[0][0], interpolation='nearest', cmap='gray')
             titless = plt.title('resized frame 80x80')
             #plt.getp(titless)
             plt.show()
-        
+
         _state = self.arr_to_gpu(state)
         s = Variable(_state)
         h1 = F.relu(self.l1(s))
-        
+
         if show:
             self.show_convolutions(h1)
-        
+
         h2 = F.relu(self.l2(h1))
-        
+
         if show:
             self.show_convolutions(h2)
-        
+
         h3 = F.relu(self.l3(h2))
-        
+
         if show:
             self.show_convolutions(h3)
-        
+
+        print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]), " --- ", len(h1), " and ",len(h1[0]), " and ",len(h1[0][0]), " and ",len(h1[0][0][0]), " --- ", len(h2), " and ",len(h2[0]), " and ",len(h2[0][0]), " and ",len(h2[0][0][0]), " --- ", len(h3), " and ",len(h3[0]), " and ",len(h3[0][0]), " and ",len(h3[0][0][0]))
+
         #hlstm = F.relu(self.lstm(h3))
         #h4 = F.relu(self.l4(hlstm))
         h4 = F.relu(self.l4(h3))
         #hlstm = F.relu(self.lstm(h4))
         q_value = self.out(h4)
         return q_value
+        """
+
+    def __call__(self, state: np.ndarray, show=False):
+        
+        """if(len(state)<1):#> now impossible for test
+            # in case we have several observations at once, happens during calc_loss
+            result = []
+            #print("begin :",state)
+            for item in state:
+                #print("item :", item)
+                obsitem = np.ndarray(shape = (1,), dtype = "object")
+                obsitem[0] = item
+                #obsitem=np.ndarray(1)
+                #obsitem.put(0,item)
+                #print("obsitem",obsitem)
+                result.append(self(obsitem))
+            #result = Variable(data=result)
+            return result
+        else:"""
+        if(len(state)==1):
+            obsitem = np.ndarray(shape = (32,4,80,80), dtype = "float32")
+            for e in range(len(obsitem)):
+                obsitem[e]=state[0]
+            state = obsitem
+        if show:
+            #print("ZAWARUDO")
+            plt.imshow(state[0][0], interpolation='nearest', cmap='gray')
+            titless = plt.title('resized frame 80x80')
+            #plt.getp(titless)
+            plt.show()
+
+        _state = self.arr_to_gpu(state)
+        s = Variable(_state)
+        #print("---------")
+        #print(type(_state))
+        #print(type(_state[0]))
+        #print(type(_state[0][0]))
+        #print(type(_state[0][0][0]))
+        #print(type(_state[0][0][0][0]))
+        #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]))
+        #print(state.dtype, " and ",state[0].dtype, " and ",state[0][0].dtype)
+        h1 = F.relu(self.l1(s))
+
+        if show:
+            self.show_convolutions(h1)
+
+        h2 = F.relu(self.l2(h1))
+
+        if show:
+            self.show_convolutions(h2)
+
+        h3 = F.relu(self.l3(h2))
+
+        if show:
+            self.show_convolutions(h3)
+
+        #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]), " --- ", len(h1), " and ",len(h1[0]), " and ",len(h1[0][0]), " and ",len(h1[0][0][0]), " --- ", len(h2), " and ",len(h2[0]), " and ",len(h2[0][0]), " and ",len(h2[0][0][0]), " --- ", len(h3), " and ",len(h3[0]), " and ",len(h3[0][0]), " and ",len(h3[0][0][0]))
+
+        hlstm = F.relu(self.lstm(h3))
+        h4 = F.relu(self.l4(hlstm))
+        #h4 = F.relu(self.l4(h3))
+        #hlstm = F.relu(self.lstm(h4))
+        q_value = self.out(h4)
+        #print(q_value)
+        return q_value
+        
     
     def arr_to_gpu(self, arr):
         return arr if not self.on_gpu else cuda.to_gpu(arr)
@@ -180,6 +249,7 @@ class DQNAgent(Agent):
     def act(self, observation, reward, framefirstorlast=False):
         o = self._update_state(observation)
         s = self.get_state()
+        #print("lenbefore", len(np.array([s])))
         #TODO : show first and last
         qv = self.q(np.array([s]), framefirstorlast) # batch size = 1
 

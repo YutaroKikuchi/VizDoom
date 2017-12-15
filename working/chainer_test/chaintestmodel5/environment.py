@@ -27,8 +27,9 @@ from skimage.transform import resize
 
 class Environment(env.Env):
 
-    def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=True, show_frames =False):
+    def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=False, show_frames =False, show_end_graph=False):
         # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
+        self.show_end_graph = show_end_graph
         self.show_frames=show_frames
         self.game = DoomGame()
         self.game.set_doom_scenario_path(scenario)
@@ -136,19 +137,19 @@ class Environment(env.Env):
             all_rewards = all_rewards + scores
                 
 
-            
-        all_rewards = np.array(all_rewards)
-        print(type(all_rewards))
-        plt.plot(all_rewards)
-        plt.savefig("graph_epoch_"+ "all" +".png")
-        plt.show()
+        if show_end_graph:
+            all_rewards = np.array(all_rewards)
+            print(type(all_rewards))
+            plt.plot(all_rewards)
+            plt.savefig("graph_epoch_"+ "all" +".png")
+            plt.show()
 
 
-        all_means = np.array(all_means)
-        print(type(all_means))
-        plt.plot(all_means)
-        plt.savefig("graph_epoch_"+ "allmeans" +".png")
-        plt.show()
+            all_means = np.array(all_means)
+            print(type(all_means))
+            plt.plot(all_means)
+            plt.savefig("graph_epoch_"+ "allmeans" +".png")
+            plt.show()
             
 
 

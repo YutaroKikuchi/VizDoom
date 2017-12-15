@@ -23,7 +23,8 @@ class Q(Chain):
     sizex = 80  # 80 X y image
     sizey = 80  # x X 80 image
     
-    def __init__(self, n_history, n_action, on_gpu=False):
+    def __init__(self, n_history, n_action, on_gpu=False,model_lstm=True):
+        self.model_lstm=model_lstm
         self.n_history = n_history
         self.n_action = n_action
         self.on_gpu = on_gpu
@@ -91,6 +92,7 @@ class Q(Chain):
             #result = Variable(data=result)
             return result
         else:"""
+        """
         if(len(state)==1):
             obsitem = np.ndarray(shape = (32,4,80,80), dtype = "float32")
             for e in range(len(obsitem)):
@@ -102,7 +104,7 @@ class Q(Chain):
             titless = plt.title('resized frame 80x80')
             #plt.getp(titless)
             plt.show()
-
+        """
         _state = self.arr_to_gpu(state)
         s = Variable(_state)
         #print("---------")
@@ -130,9 +132,11 @@ class Q(Chain):
 
         #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]), " --- ", len(h1), " and ",len(h1[0]), " and ",len(h1[0][0]), " and ",len(h1[0][0][0]), " --- ", len(h2), " and ",len(h2[0]), " and ",len(h2[0][0]), " and ",len(h2[0][0][0]), " --- ", len(h3), " and ",len(h3[0]), " and ",len(h3[0][0]), " and ",len(h3[0][0][0]))
 
-        hlstm = F.relu(self.lstm(h3))
-        h4 = F.relu(self.l4(hlstm))
-        #h4 = F.relu(self.l4(h3))
+        if self.model_lstm:
+            hlstm = F.relu(self.lstm(h3))
+            h4 = F.relu(self.l4(hlstm))
+        else:
+            h4 = F.relu(self.l4(h3))
         #hlstm = F.relu(self.lstm(h4))
         q_value = self.out(h4)
         #print(q_value)

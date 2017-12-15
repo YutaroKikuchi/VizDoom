@@ -55,49 +55,50 @@ class DQNTrainer(Agent):
         self._loss = 9
         self._qv = 0
 
-    def calc_loss(self, states, actions, rewards, next_states, episode_ends):
-        print("calculate loss, states :",len(states), "next stqtes:", len(next_states))
+    def calc_loss(self, states, actions, rewards, next_states, episode_ends, model_lstm=True):
+        #print("calculate loss, states :",len(states), "next stqtes:", len(next_states))
         #print(states)
-        qv = self.agent.q(states)
-        """
-        qv = np.ndarray(shape = (0,3), dtype = "float32")
-        ii=0
-        for item in states:
-            obsitem = np.ndarray(shape = (1,4,80,80), dtype = "float32")
-            obsitem[0] = item
-            a =(self.target(obsitem))[0]
-            b =a.array
-            c = np.ndarray(shape = (3), dtype = "float32")
-            for e in range(len(b)):
-                c[e]=b[e]
-            qvbis = np.ndarray(shape = (1,3), dtype = "float32")
-            qvbis[0]=c
-            qv = np.concatenate((qv,qvbis))
-            ii = ii + 1
-        #print(qv)
-        qv = Variable(data=qv)
-        #print(qv)"""
+        if not model_lstm:
+            qv = self.agent.q(states)
+        else:
+            qv = np.ndarray(shape = (0,3), dtype = "float32")
+            ii=0
+            for item in states:
+                obsitem = np.ndarray(shape = (1,4,80,80), dtype = "float32")
+                obsitem[0] = item
+                a =(self.target(obsitem))[0]
+                b =a.array
+                c = np.ndarray(shape = (3), dtype = "float32")
+                for e in range(len(b)):
+                    c[e]=b[e]
+                qvbis = np.ndarray(shape = (1,3), dtype = "float32")
+                qvbis[0]=c
+                qv = np.concatenate((qv,qvbis))
+                ii = ii + 1
+            #print(qv)
+            qv = Variable(data=qv)
+            #print(qv)
         
-        
-        q_t = self.target(next_states)  # Q(s', *)
-        
-        """q_t = np.ndarray(shape = (0,3), dtype = "float32")
-        ii=0
-        for item in next_states:
-            obsitem = np.ndarray(shape = (1,4,80,80), dtype = "float32")
-            obsitem[0] = item
-            a =(self.target(obsitem))[0]
-            b =a.array
-            c = np.ndarray(shape = (3), dtype = "float32")
-            for e in range(len(b)):
-                c[e]=b[e]
-            qvbis = np.ndarray(shape = (1,3), dtype = "float32")
-            qvbis[0]=c
-            q_t = np.concatenate((q_t,qvbis))
-            ii = ii + 1
-        #print(q_t)
-        q_t = Variable(data=q_t)
-        #print(q_t)"""
+        if not model_lstm:
+            q_t = self.target(next_states)  # Q(s', *)
+        else:
+            q_t = np.ndarray(shape = (0,3), dtype = "float32")
+            ii=0
+            for item in next_states:
+                obsitem = np.ndarray(shape = (1,4,80,80), dtype = "float32")
+                obsitem[0] = item
+                a =(self.target(obsitem))[0]
+                b =a.array
+                c = np.ndarray(shape = (3), dtype = "float32")
+                for e in range(len(b)):
+                    c[e]=b[e]
+                qvbis = np.ndarray(shape = (1,3), dtype = "float32")
+                qvbis[0]=c
+                q_t = np.concatenate((q_t,qvbis))
+                ii = ii + 1
+            #print(q_t)
+            q_t = Variable(data=q_t)
+            #print(q_t)
         
         
         #print("calculate loss, qv :",type(qv), "qt:", type(q_t))

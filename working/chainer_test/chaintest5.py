@@ -36,7 +36,7 @@ def train(render, gpu):
     agent = DQNAgent(env.actions, epsilon=0.5, model_path=PATH, on_gpu=gpu)
     trainer = DQNTrainer(agent)
 
-    for ep, s, r in env.play(trainer, epochs=20, render=render, report_interval=20, action_interval=4):
+    for ep, s, r in env.play(trainer, epochs=30, render=render, report_interval=20, action_interval=4):
         pass
 
 train(True, False)

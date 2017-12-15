@@ -93,15 +93,7 @@ WORKDIR ${HOME_DIR}
 
 RUN mkdir config
 # python files
-COPY chaintest.py .
-COPY chaintest2.py .
-COPY chaintest3.py .
-COPY chaintrain3.py .
-COPY chaintest4.py .
-COPY chaintest4p4.py .
 COPY chaintest5.py .
-COPY chainrltuto.py .
-COPY chainrltuto2.py .
 COPY chaintestmodel5 ./chaintestmodel5
 
 # doom map

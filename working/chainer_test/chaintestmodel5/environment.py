@@ -29,6 +29,7 @@ class Environment(env.Env):
 
     def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=False, show_frames =False, show_end_graph=False):
         # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
+        self.render=window
         self.show_end_graph = show_end_graph
         self.show_frames=show_frames
         self.game = DoomGame()
@@ -85,7 +86,7 @@ class Environment(env.Env):
     # TODO: modify this part
     def play(self, agent, epochs=5, render=True, report_interval=-1, action_interval=1, record_path=""):
         scores = []
-        self.set_window(render)
+        self.set_window(self.render)
 
         epoch_len = 1000
         

@@ -4,6 +4,7 @@ from chainer import Variable
 from chainer import optimizers
 from chainer import cuda
 from chaintestmodel5.dqn_agent import Q
+from chaintestmodel5.replay_buffer import ReplayBuffer
 import chainer.functions as F
 from chaintestmodel5.agent import Agent
 
@@ -16,7 +17,7 @@ class DQNTrainer(Agent):
                     replay_size=32,
                     gamma=0.99,
                     #initial_exploration=10**2, #small value for test only
-                    initial_exploration=10**4, #real value
+                    initial_exploration=34, #real value ?10**4?
                     target_update_freq=10**4,
                     learning_rate=0.00025,
                     epsilon_decay=1e-6,
@@ -38,13 +39,15 @@ class DQNTrainer(Agent):
         n_hist = self.agent.q.n_history
         sizex = self.agent.q.sizex
         sizey = self.agent.q.sizey
+        self.memory=ReplayBuffer(memory_size, n_hist, sizex, sizey)
+        """
         self.memory = [
             np.zeros((memory_size, n_hist, sizex, sizey), dtype=np.float32),
             np.zeros(memory_size, dtype=np.uint8),
             np.zeros((memory_size, 1), dtype=np.float32),
             np.zeros((memory_size, n_hist, sizex, sizey), dtype=np.float32),
             np.zeros((memory_size, 1), dtype=np.bool)
-        ]
+        ]"""
         self.memory_text = [
             "state", "action", "reward", "next_state", "episode_end"
         ]
@@ -55,16 +58,21 @@ class DQNTrainer(Agent):
         self._loss = 9
         self._qv = 0
 
-    def calc_loss(self, states, actions, rewards, next_states, episode_ends, model_lstm=True):
+    def calc_loss(self, indices, model_lstm=False):
         #print("calculate loss, states :",len(states), "next stqtes:", len(next_states))
         #print(states)
+        #    self.cursor  self.before_action_obs  self.after_action_obs self.action self.reward self.is_episode_end
+        #states, actions, rewards, next_states, episode_ends
+        to_np = lambda arr: np.array(arr)
         if not model_lstm:
+            states=to_np([self.memory.before_action_obs[i] for i in indices])
             qv = self.agent.q(states)
         else:
             qv = np.ndarray(shape = (0,3), dtype = "float32")
             ii=0
-            for item in states:
-                obsitem = np.ndarray(shape = (1,4,80,80), dtype = "float32")
+            for i in indices:
+                item=self.memory.before_action_obs[i]
+                obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
                 obsitem[0] = item
                 a =(self.target(obsitem))[0]
                 b =a.array
@@ -80,12 +88,14 @@ class DQNTrainer(Agent):
             #print(qv)
         
         if not model_lstm:
+            next_states=to_np([self.memory.after_action_obs[i] for i in indices])
             q_t = self.target(next_states)  # Q(s', *)
         else:
             q_t = np.ndarray(shape = (0,3), dtype = "float32")
             ii=0
-            for item in next_states:
-                obsitem = np.ndarray(shape = (1,4,80,80), dtype = "float32")
+            for i in indices:
+                item=self.memory.after_action_obs[i]
+                obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
                 obsitem[0] = item
                 a =(self.target(obsitem))[0]
                 b =a.array
@@ -99,29 +109,20 @@ class DQNTrainer(Agent):
             #print(q_t)
             q_t = Variable(data=q_t)
             #print(q_t)
-        
-        
-        #print("calculate loss, qv :",type(qv), "qt:", type(q_t))
-        #print("dty, qv :",qv.dtype, "qt:", q_t.dtype)
-        #print("dty, qv :",qv.data.dtype, "qt:", q_t.data.dtype)
-        #print("dty, qv :",qv.data[0].dtype, "qt:", q_t.data[0].dtype)
-        #print("values, qv :",type(qv.data), "qt:", type(q_t.data))
-        #print("alltypes",type(qv),type(qv.data),type(qv.data[0]),type(qv.data[0][0]))
-        #print("alltypes",type(q_t),type(q_t.data),type(q_t.data[0]),type(q_t.data[0][0]))
-        #print("alltypes",len(qv),len(qv.data),len(qv.data[0]))
-        #print("alltypes",len(q_t),len(q_t.data),len(q_t.data[0]))
-        #print(qv)
-        #print(q_t)
+
         max_q_prime = np.array(list(map(np.max, q_t.data)), dtype=np.float32)  # max_a Q(s', a)
         
         target = cuda.to_cpu(qv.data.copy())
         for i in range(self.replay_size):
-            if episode_ends[i][0] is True:
-                _r = np.sign(rewards[i])
+            if self.memory.is_episode_end[i][0] is True:
+                _r = np.sign(self.memory.reward[indices[i]])
             else:
-                _r = np.sign(rewards[i]) + self.gamma * max_q_prime[i]
-            
-            target[i, actions[i]] = _r
+                _r = np.sign(self.memory.reward[indices[i]]) + self.gamma * max_q_prime[i]
+            #print("memory element :", self.memory.reward[indices[i]])
+            #print("memoryfull is :", self.memory.reward)
+            #print("r is :", _r)
+            #print("debug tqrget",type(target), " action element ", type(self.memory.action[indices[i]]), " r ", type(_r))
+            target[i][self.memory.action[indices[i]]] = _r
         
         td = Variable(self.target.arr_to_gpu(target)) - qv
         #print(td.data)
@@ -155,19 +156,9 @@ class DQNTrainer(Agent):
         if not episode_end:
             action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast)
             result_state = self.agent.get_state()
-            self.memorize(
-                last_state, 
-                last_action, 
-                reward,
-                result_state,
-                False)
+            self.memory.stock_replay_information(last_state, last_action, result_state, reward, False)
         else:
-            self.memorize(
-                last_state, 
-                last_action, 
-                reward,
-                last_state,
-                True)
+            self.memory.stock_replay_information(last_state, last_action, last_state, reward, True)
         
         if self.initial_exploration <= self._step:
             self.experience_replay()
@@ -178,6 +169,7 @@ class DQNTrainer(Agent):
         self._step += 1
         return action
 
+    """
     def memorize(self, state, action, reward, next_state, episode_end):
         _index = self._step % self.memory_size
         self.memory[0][_index] = state
@@ -186,29 +178,32 @@ class DQNTrainer(Agent):
         if not episode_end:
             self.memory[3][_index] = next_state
         self.memory[4][_index] = episode_end
+        """
+        
 
     def experience_replay(self):
         indices = []
         if self._step < self.memory_size:
-            indices = np.random.randint(0, self._step, (self.replay_size))
+            indices = np.random.randint(0, self.memory.cursor, (self.replay_size))
         else:
             indices = np.random.randint(0, self.memory_size, (self.replay_size))
-        
+        """
         states = []
         actions = []
         rewards = []
         next_states = []
         episode_ends = []
-        for i in indices:
+        for i in indices: # copy is too heavy, redo it with reference
             states.append(self.memory[0][i])
             actions.append(self.memory[1][i])
             rewards.append(self.memory[2][i])
             next_states.append(self.memory[3][i])
             episode_ends.append(self.memory[4][i])
-        
+        """
         to_np = lambda arr: np.array(arr)
         self.optimizer.target.cleargrads()
-        loss = self.calc_loss(to_np(states), to_np(actions), to_np(rewards), to_np(next_states), to_np(episode_ends))
+        #loss = self.calc_loss(to_np(states), to_np(actions), to_np(rewards), to_np(next_states), to_np(episode_ends))
+        loss = self.calc_loss(to_np(indices))
         loss.backward()
         self.optimizer.update()
     

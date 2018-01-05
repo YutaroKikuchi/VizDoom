@@ -23,7 +23,7 @@ class Q(Chain):
     sizex = 80  # 80 X y image
     sizey = 80  # x X 80 image
     
-    def __init__(self, n_history, n_action, on_gpu=False,model_lstm=True):
+    def __init__(self, n_history, n_action, on_gpu=False,model_lstm=False):
         self.model_lstm=model_lstm
         self.n_history = n_history
         self.n_action = n_action
@@ -201,7 +201,7 @@ class Q(Chain):
 
 class DQNAgent(Agent):
     
-    def __init__(self, actions, epsilon=1, n_history=4, on_gpu=False, model_path="", load_if_exist=True):
+    def __init__(self, actions, epsilon=1, n_history=20, on_gpu=False, model_path="", load_if_exist=True):
         self.actions = actions
         self.epsilon = epsilon
         self.q = Q(n_history, len(actions), on_gpu)

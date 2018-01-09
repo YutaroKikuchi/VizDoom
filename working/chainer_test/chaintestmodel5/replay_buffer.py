@@ -5,10 +5,10 @@ import math
 
 class ReplayBuffer():
 
-    def __init__(self,capacity=10**4,n_hist=64,sizex=80,sizey=80):
+    def __init__(self,capacity=10**4,sizex=80,sizey=80):
         # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
-        self.before_action_obs=np.zeros((capacity, n_hist, sizex, sizey), dtype=np.float32)
-        self.after_action_obs=np.zeros((capacity, n_hist, sizex, sizey), dtype=np.float32)
+        self.before_action_obs=np.zeros((capacity, sizex, sizey), dtype=np.float32)
+        self.after_action_obs=np.zeros((capacity, sizex, sizey), dtype=np.float32)
         self.action=np.zeros(capacity, dtype=np.uint8)
         self.reward=np.zeros((capacity, 1), dtype=np.float32)
         self.is_episode_end=np.zeros((capacity, 1), dtype=np.bool)

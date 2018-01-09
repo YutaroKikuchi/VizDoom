@@ -14,10 +14,10 @@ class DQNTrainer(Agent):
     def __init__(self, 
                     agent, 
                     memory_size=10**4,
-                    replay_size=32,
+                    replay_size=64, # has to be equal to n_history
                     gamma=0.99,
                     #initial_exploration=10**2, #small value for test only
-                    initial_exploration=34, #real value ?10**4?
+                    initial_exploration=65, #real value ?10**4?
                     target_update_freq=10**4,
                     learning_rate=0.00025,
                     epsilon_decay=1e-6,
@@ -39,7 +39,7 @@ class DQNTrainer(Agent):
         n_hist = self.agent.q.n_history
         sizex = self.agent.q.sizex
         sizey = self.agent.q.sizey
-        self.memory=ReplayBuffer(memory_size, n_hist, sizex, sizey)
+        self.memory=ReplayBuffer(memory_size, sizex, sizey)
         """
         self.memory = [
             np.zeros((memory_size, n_hist, sizex, sizey), dtype=np.float32),
@@ -65,51 +65,55 @@ class DQNTrainer(Agent):
         #states, actions, rewards, next_states, episode_ends
         to_np = lambda arr: np.array(arr)
         if not model_lstm:
-            states=to_np([self.memory.before_action_obs[i] for i in indices])
+            states=to_np([[self.memory.before_action_obs[i]] for i in indices])
             qv = self.agent.q(states)
         else:
             qv = np.ndarray(shape = (0,3), dtype = "float32")
             ii=0
-            for i in indices:
-                item=self.memory.before_action_obs[i]
-                obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
-                obsitem[0] = item
-                a =(self.target(obsitem))[0]
-                b =a.array
-                c = np.ndarray(shape = (3), dtype = "float32")
-                for e in range(len(b)):
-                    c[e]=b[e]
-                qvbis = np.ndarray(shape = (1,3), dtype = "float32")
-                qvbis[0]=c
-                qv = np.concatenate((qv,qvbis))
-                ii = ii + 1
+            item = np.ndarray(shape = (self.agent.q.n_history,80,80), dtype = "float32")
+            for i in range(len(indices)):
+                item[i]=self.memory.before_action_obs[indices[i]]
+                
+            obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
+            obsitem[0] = item
+            qresult =(self.target(obsitem))[0]
+            qresultarray =qresult.array
+            qresultndarray = np.ndarray(shape = (3), dtype = "float32")
+            for e in range(len(qresultarray)):
+                qresultndarray[e]=qresultarray[e]
+            qvbis = np.ndarray(shape = (1,3), dtype = "float32")
+            qvbis[0]=qresultndarray
+            qv = np.concatenate((qv,qvbis))
             #print(qv)
             qv = Variable(data=qv)
             #print(qv)
         
         if not model_lstm:
-            next_states=to_np([self.memory.after_action_obs[i] for i in indices])
-            q_t = self.target(next_states)  # Q(s', *)
+            next_states=to_np([[self.memory.after_action_obs[i]] for i in indices])
+            #print("next : ", next_states)
+            q_t = self.target(next_states)  # Q(s', *)after_action_obs
+            #print("qt", q_t)
         else:
             q_t = np.ndarray(shape = (0,3), dtype = "float32")
             ii=0
-            for i in indices:
-                item=self.memory.after_action_obs[i]
-                obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
-                obsitem[0] = item
-                a =(self.target(obsitem))[0]
-                b =a.array
-                c = np.ndarray(shape = (3), dtype = "float32")
-                for e in range(len(b)):
-                    c[e]=b[e]
-                qvbis = np.ndarray(shape = (1,3), dtype = "float32")
-                qvbis[0]=c
-                q_t = np.concatenate((q_t,qvbis))
-                ii = ii + 1
+            item = np.ndarray(shape = (self.agent.q.n_history,80,80), dtype = "float32")
+            for i in range(len(indices)):
+                item[i]=self.memory.after_action_obs[indices[i]]
+                
+            obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
+            obsitem[0] = item
+            qresult =(self.target(obsitem))[0]
+            qresultarray =qresult.array
+            qresultndarray = np.ndarray(shape = (3), dtype = "float32")
+            for e in range(len(qresultarray)):
+                qresultndarray[e]=qresultarray[e]
+            qvbis = np.ndarray(shape = (1,3), dtype = "float32")
+            qvbis[0]=qresultndarray
+            q_t = np.concatenate((q_t,qvbis))
             #print(q_t)
             q_t = Variable(data=q_t)
             #print(q_t)
-
+        #print("data ", q_t.data)
         max_q_prime = np.array(list(map(np.max, q_t.data)), dtype=np.float32)  # max_a Q(s', a)
         
         target = cuda.to_cpu(qv.data.copy())
@@ -117,6 +121,7 @@ class DQNTrainer(Agent):
             if self.memory.is_episode_end[i][0] is True:
                 _r = np.sign(self.memory.reward[indices[i]])
             else:
+                #print(max_q_prime, self.replay_size)
                 _r = np.sign(self.memory.reward[indices[i]]) + self.gamma * max_q_prime[i]
             #print("memory element :", self.memory.reward[indices[i]])
             #print("memoryfull is :", self.memory.reward)
@@ -156,9 +161,9 @@ class DQNTrainer(Agent):
         if not episode_end:
             action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast)
             result_state = self.agent.get_state()
-            self.memory.stock_replay_information(last_state, last_action, result_state, reward, False)
+            self.memory.stock_replay_information(last_state[0], last_action, result_state[0], reward, False)
         else:
-            self.memory.stock_replay_information(last_state, last_action, last_state, reward, True)
+            self.memory.stock_replay_information(last_state[0], last_action, last_state[0], reward, True)
         
         if self.initial_exploration <= self._step:
             self.experience_replay()

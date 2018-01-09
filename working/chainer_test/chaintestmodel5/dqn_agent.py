@@ -25,7 +25,7 @@ class Q(Chain):
     
     def __init__(self, n_history, n_action, on_gpu=False,model_lstm=False):
         self.model_lstm=model_lstm
-        self.n_history = n_history
+        self.n_history = n_history # we could rename it to number of channels, here it's one since we work with grayscale
         self.n_action = n_action
         self.on_gpu = on_gpu
         super(Q, self).__init__(
@@ -116,17 +116,14 @@ class Q(Chain):
         #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]))
         #print(state.dtype, " and ",state[0].dtype, " and ",state[0][0].dtype)
         h1 = F.relu(self.l1(s))
-
         if show:
             self.show_convolutions(h1)
 
         h2 = F.relu(self.l2(h1))
-
         if show:
             self.show_convolutions(h2)
 
         h3 = F.relu(self.l3(h2))
-
         if show:
             self.show_convolutions(h3)
 
@@ -201,10 +198,10 @@ class Q(Chain):
 
 class DQNAgent(Agent):
     
-    def __init__(self, actions, epsilon=1, n_history=20, on_gpu=False, model_path="", load_if_exist=True):
+    def __init__(self, actions, epsilon=1, n_history=64, on_gpu=False, model_path="", load_if_exist=True):
         self.actions = actions
         self.epsilon = epsilon
-        self.q = Q(n_history, len(actions), on_gpu)
+        self.q = Q(1, len(actions), on_gpu)
         self._state = []
         self._observations = [
             np.zeros((self.q.sizex, self.q.sizey), np.float32), 

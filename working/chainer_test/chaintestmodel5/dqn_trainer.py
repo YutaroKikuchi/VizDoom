@@ -188,7 +188,7 @@ class DQNTrainer(Agent):
 
     def experience_replay(self):
         indices = []
-        if self._step < self.memory_size:
+        if self._step < self.memory_size-1:
             indices = np.random.randint(0, self.memory.cursor, (self.replay_size))
         else:
             indices = np.random.randint(0, self.memory_size, (self.replay_size))

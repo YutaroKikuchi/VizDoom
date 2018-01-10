@@ -115,15 +115,19 @@ class Q(Chain):
         #print(type(_state[0][0][0][0]))
         #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]))
         #print(state.dtype, " and ",state[0].dtype, " and ",state[0][0].dtype)
+        #print("state shape", state.shape)
         h1 = F.relu(self.l1(s))
+        #print("h1 shape", h1.shape)
         if show:
             self.show_convolutions(h1)
 
         h2 = F.relu(self.l2(h1))
+        #print("h2 shape", h2.shape)
         if show:
             self.show_convolutions(h2)
 
         h3 = F.relu(self.l3(h2))
+        #print("h3 shape", h3.shape)
         if show:
             self.show_convolutions(h3)
 
@@ -135,7 +139,9 @@ class Q(Chain):
         else:
             h4 = F.relu(self.l4(h3))
         #hlstm = F.relu(self.lstm(h4))
+        #print("h4 shape", h4.shape)
         q_value = self.out(h4)
+        #print("q_value shape", q_value.shape)
         #print(q_value)
         return q_value
         

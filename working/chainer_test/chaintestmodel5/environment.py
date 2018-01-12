@@ -5,6 +5,7 @@ from vizdoom import *
 
 from random import choice
 from time import sleep
+from time import gmtime, strftime
 
 import datetime
 import chainer
@@ -27,8 +28,10 @@ from skimage.transform import resize
 
 class Environment(env.Env):
 
-    def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=False, show_frames =False, show_end_graph=False):
+    def __init__(self, scenario="./config/basic.wad", dmap = "map01", episode_len=200, window=True, show_frames =False, show_end_graph=True,
+                 epoch_len = 1000): #1000
         # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
+        self.epoch_len = epoch_len
         self.render=window
         self.show_end_graph = show_end_graph
         self.show_frames=show_frames
@@ -88,13 +91,14 @@ class Environment(env.Env):
         scores = []
         self.set_window(self.render)
 
-        epoch_len = 1000
+        epoch_len = self.epoch_len
         
         all_rewards=[]
         all_means=[]
         
         for i in range(epochs):
             print("Epoch nb " + str(i))
+            print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
             observation = self.reset()
             done = False
             reward = 0.0
@@ -104,17 +108,17 @@ class Environment(env.Env):
             last_action = 0
             scores = []
             while step_count<epoch_len:
-
                 if step_count == 0:
+                    last_obs=[]
                     action = agent.start(observation)
                 else:
+                    last_obs=observation
                     if step_count % action_interval == 0 or reward != 0:
                         action = agent.act(observation, reward, framefirstorlast=(self.show_frames and (step_count==epoch_len-1))) # step_count==1 or
                     else:
                         action = last_action
 
                 observation, reward, done, info = self.step(action)
-                
                 last_action = action
 
                 if done:
@@ -138,7 +142,7 @@ class Environment(env.Env):
             all_rewards = all_rewards + scores
                 
 
-        if show_end_graph:
+        if self.show_end_graph:
             all_rewards = np.array(all_rewards)
             print(type(all_rewards))
             plt.plot(all_rewards)

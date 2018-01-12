@@ -34,6 +34,7 @@ class DQNTrainer(Agent):
         self.epsilon_decay = epsilon_decay
         self.minimum_epsilon = minimum_epsilon
         self._step = 0
+        self.sub_step=0
 
         # prepare memory for replay
         n_hist = self.agent.q.n_history
@@ -143,6 +144,7 @@ class DQNTrainer(Agent):
     def start(self, observation):
         return self.agent.start(observation)
     
+    
     def act(self, observation, reward, framefirstorlast=False):
         if self.initial_exploration <= self._step:
             self.agent.epsilon -= 1.0/10**6
@@ -161,16 +163,17 @@ class DQNTrainer(Agent):
         if not episode_end:
             action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast)
             result_state = self.agent.get_state()
-            self.memory.stock_replay_information(last_state[0], last_action, result_state[0], reward, False)
+            self.memory.stock_replay_information(last_state, last_action, result_state[0], reward, False)
+            #print("is the same ?", last_state[0]==result_state[0])
         else:
-            self.memory.stock_replay_information(last_state[0], last_action, last_state[0], reward, True)
-        
+            self.memory.stock_replay_information(last_state, last_action, last_state, reward, True)
+
         if self.initial_exploration <= self._step:
             self.experience_replay()
 
             if self._step % self.target_update_freq == 0:
                 self.target.copyparams(self.agent.q)
-
+            
         self._step += 1
         return action
 

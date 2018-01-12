@@ -214,6 +214,7 @@ class DQNAgent(Agent):
             np.zeros((self.q.sizex, self.q.sizey), np.float32)
         ]  # now & pre
         self.last_action = 0
+        self.last_state=[]
         self.model_path = model_path if model_path else os.path.join(os.path.dirname(__file__), "./store")
         if not os.path.exists(self.model_path):
             print("make directory to store model at {0}".format(self.model_path))
@@ -270,6 +271,7 @@ class DQNAgent(Agent):
         self.last_action = action
 
         return action
+    
 
     def get_state(self):
         state = []

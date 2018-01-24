@@ -1,43 +1,48 @@
 # modified https://github.com/icoxfog417/chainer_pong/blob/master/run.py
 import os
 import sys
-#import gym
 a = os.path.dirname(os.path.abspath(__file__)) + "/chaintestmodel5"
-print(a)
 sys.path.append(a)
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from chaintestmodel5.environment import Environment
 from chaintestmodel5.dqn_agent import DQNAgent
 from chaintestmodel5.dqn_trainer import DQNTrainer
 
+PATH = os.path.join(os.path.dirname(__file__), "./store") # where we store the training data that will be used in the testing
 
-PATH = os.path.join(os.path.dirname(__file__), "./store")
-# by default epoch len is 200f
 
-def run(submit_key, gpu):
-    env = Environment()
-    agent = DQNAgent(env.actions, epsilon=0.01, model_path=PATH, on_gpu=gpu)
-    path = ""
-    episode = 5
-    if submit_key:
-        print("make directory to submit result")
-        path = os.path.join(os.path.dirname(__file__), "submit")
-    epochsnb = 20
-
-    for ep, s, r in env.play(agent, epochs=epochsnb, render=True, action_interval=4, record_path=path):
-        pass
+def run(render, gpu):
+    # -- run the test using the training data in the PATH
+    # render : True to open the Doom window
+    # gpu : True to use the gpu functions (faster)
     
-    #if submit_key:
-        #gym.upload(path, api_key=submit_key)
+    env = Environment(episode_len=200,show_frames=False, epoch_len = 2000) # chose the len of epoch and episode
+    # (show_frames set to True to see the first and last frame of each epoch with the 3 convolutions)
+    
+    agent = DQNAgent(env.actions, epsilon=0.01, model_path=PATH, on_gpu=gpu) # will load the training data
+    
+    # play
+    for ep, s, r in env.play(agent, epochs=20, render=render, action_interval=4): # chose the number of epochs and action interval
+        pass
 
 
 def train(render, gpu):
-    env = Environment(episode_len=200,show_frames=False) # show_frames set to True to see the first and last frame of each epoch with the 3 convolutions
-    agent = DQNAgent(env.actions, epsilon=0.5, model_path=PATH, on_gpu=gpu)
-    trainer = DQNTrainer(agent)
+    # -- train an agent and save it to the PATH
+    # render : True to open the Doom window
+    # gpu : True to use the gpu functions (faster)
+    
+    env = Environment(episode_len=200,show_frames=False, epoch_len = 2000) # chose the len of epoch and episode
+    # (show_frames set to True to see the first and last frame of each epoch with the 3 convolutions)
+    
+    agent = DQNAgent(env.actions, epsilon=0.5, model_path=PATH, on_gpu=gpu) # the agent making the decisions, gets better with time
+    trainer = DQNTrainer(agent) # the one organizing the training session for the agent, same type as agent to re-use the same environment loop in training and testing
 
-    for ep, s, r in env.play(trainer, epochs=20, render=render, report_interval=20, action_interval=4):
+    # train
+    for ep, s, r in env.play(trainer, epochs=3, render=render, action_interval=4): # chose the number of epochs and action interval
         pass
 
+
+# Run a training and testing session
 train(True, False)
-run(False, False)
+run(True, False)
+

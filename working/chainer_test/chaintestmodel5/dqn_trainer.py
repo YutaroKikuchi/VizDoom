@@ -10,48 +10,39 @@ from chaintestmodel5.agent import Agent
 
 
 class DQNTrainer(Agent):
+    # the one organizing the training
     
-    def __init__(self, 
-                    agent, 
-                    memory_size=10**4,
-                    replay_size=64, # has to be equal to n_history
-                    gamma=0.99,
-                    #initial_exploration=10**2, #small value for test only
-                    initial_exploration=65, #real value ?10**4?
-                    target_update_freq=10**4,
-                    learning_rate=0.00025,
-                    epsilon_decay=1e-6,
+    def __init__(self, agent, memory_size=10**4, replay_size=64, gamma=0.99, initial_exploration=65, target_update_freq=10**4, learning_rate=0.00025,
                     minimum_epsilon=0.1):
+        # -- Initialize the trainer with the given settings
+        # agent : the agent to train, it is the one doing the thinking and deciding which action to do
+        # memory_size : memory size for past observations with their action and consequence
+        # replay_size : how many past scenarios should be re-experienced during the replay phase
+        # gamma : constant to calculate the loss
+        # initial_exploration : number of frames before doing replays, should be higher than replay_size in order to have enough scenarios for replay
+        # target_update_freq : every multiple of steps of this number, reset the two Q functions to be equal to eachother
+        # learning_rate : optimizer parameter
+        # minimum_epsilon : minimum value of epsilon (epsilon decreases until it reaches this value)
+        
+        # memorize settings
         self.agent = agent
-        self.target = Q(self.agent.q.n_history, self.agent.q.n_action, on_gpu=self.agent.q.on_gpu)
-
+        self.target = Q(self.agent.q.n_channels, self.agent.q.n_action, on_gpu=self.agent.q.on_gpu)
         self.memory_size = memory_size
         self.replay_size = replay_size
         self.gamma = gamma
         self.initial_exploration = initial_exploration
         self.target_update_freq = target_update_freq
         self.learning_rate = learning_rate
-        self.epsilon_decay = epsilon_decay
         self.minimum_epsilon = minimum_epsilon
         self._step = 0
         self.sub_step=0
-
+        self.loss_values =[]
+        
         # prepare memory for replay
-        n_hist = self.agent.q.n_history
+        n_hist = self.agent.q.n_channels
         sizex = self.agent.q.sizex
         sizey = self.agent.q.sizey
         self.memory=ReplayBuffer(memory_size, sizex, sizey)
-        """
-        self.memory = [
-            np.zeros((memory_size, n_hist, sizex, sizey), dtype=np.float32),
-            np.zeros(memory_size, dtype=np.uint8),
-            np.zeros((memory_size, 1), dtype=np.float32),
-            np.zeros((memory_size, n_hist, sizex, sizey), dtype=np.float32),
-            np.zeros((memory_size, 1), dtype=np.bool)
-        ]"""
-        self.memory_text = [
-            "state", "action", "reward", "next_state", "episode_end"
-        ]
 
         # prepare optimizer
         self.optimizer = optimizers.RMSpropGraves(lr=learning_rate, alpha=0.95, momentum=0.95, eps=0.01)
@@ -59,163 +50,123 @@ class DQNTrainer(Agent):
         self._loss = 9
         self._qv = 0
 
-    def calc_loss(self, indices, model_lstm=False):
-        #print("calculate loss, states :",len(states), "next stqtes:", len(next_states))
-        #print(states)
-        #    self.cursor  self.before_action_obs  self.after_action_obs self.action self.reward self.is_episode_end
-        #states, actions, rewards, next_states, episode_ends
+        
+    def calc_loss(self, indices):
+        # -- calculate the loss : E[(reward + gamma*maxQ' - Q)**2]
+        # indices : the index of the past scenarios from the memory buffer
+        
+        # prepare (Q)
         to_np = lambda arr: np.array(arr)
-        if not model_lstm:
-            states=to_np([[self.memory.before_action_obs[i]] for i in indices])
-            qv = self.agent.q(states)
-        else:
-            qv = np.ndarray(shape = (0,3), dtype = "float32")
-            ii=0
-            item = np.ndarray(shape = (self.agent.q.n_history,80,80), dtype = "float32")
-            for i in range(len(indices)):
-                item[i]=self.memory.before_action_obs[indices[i]]
-                
-            obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
-            obsitem[0] = item
-            qresult =(self.target(obsitem))[0]
-            qresultarray =qresult.array
-            qresultndarray = np.ndarray(shape = (3), dtype = "float32")
-            for e in range(len(qresultarray)):
-                qresultndarray[e]=qresultarray[e]
-            qvbis = np.ndarray(shape = (1,3), dtype = "float32")
-            qvbis[0]=qresultndarray
-            qv = np.concatenate((qv,qvbis))
-            #print(qv)
-            qv = Variable(data=qv)
-            #print(qv)
+        states=to_np([[self.memory.before_action_obs[i]] for i in indices])
+        qv = self.agent.q(states) # Q
         
-        if not model_lstm:
-            next_states=to_np([[self.memory.after_action_obs[i]] for i in indices])
-            #print("next : ", next_states)
-            q_t = self.target(next_states)  # Q(s', *)after_action_obs
-            #print("qt", q_t)
-        else:
-            q_t = np.ndarray(shape = (0,3), dtype = "float32")
-            ii=0
-            item = np.ndarray(shape = (self.agent.q.n_history,80,80), dtype = "float32")
-            for i in range(len(indices)):
-                item[i]=self.memory.after_action_obs[indices[i]]
-                
-            obsitem = np.ndarray(shape = (1,self.agent.q.n_history,80,80), dtype = "float32")
-            obsitem[0] = item
-            qresult =(self.target(obsitem))[0]
-            qresultarray =qresult.array
-            qresultndarray = np.ndarray(shape = (3), dtype = "float32")
-            for e in range(len(qresultarray)):
-                qresultndarray[e]=qresultarray[e]
-            qvbis = np.ndarray(shape = (1,3), dtype = "float32")
-            qvbis[0]=qresultndarray
-            q_t = np.concatenate((q_t,qvbis))
-            #print(q_t)
-            q_t = Variable(data=q_t)
-            #print(q_t)
-        #print("data ", q_t.data)
-        max_q_prime = np.array(list(map(np.max, q_t.data)), dtype=np.float32)  # max_a Q(s', a)
+        # prepare (maxQ')
+        next_states=to_np([[self.memory.after_action_obs[i]] for i in indices])
+        q_t = self.target(next_states)
+        max_q_prime = np.array(list(map(np.max, q_t.data)), dtype=np.float32)  # maxQ'
         
+        # prepare (reward + gamma*maxQ')
         target = cuda.to_cpu(qv.data.copy())
         for i in range(self.replay_size):
             if self.memory.is_episode_end[i][0] is True:
                 _r = np.sign(self.memory.reward[indices[i]])
             else:
-                #print(max_q_prime, self.replay_size)
                 _r = np.sign(self.memory.reward[indices[i]]) + self.gamma * max_q_prime[i]
-            #print("memory element :", self.memory.reward[indices[i]])
-            #print("memoryfull is :", self.memory.reward)
-            #print("r is :", _r)
-            #print("debug tqrget",type(target), " action element ", type(self.memory.action[indices[i]]), " r ", type(_r))
             target[i][self.memory.action[indices[i]]] = _r
-        
-        td = Variable(self.target.arr_to_gpu(target)) - qv
-        #print(td.data)
-        td_tmp = td.data + 1000.0 * (abs(td.data) <= 1)  # Avoid zero division
-        td_clip = td * (abs(td.data) <= 1) + td/abs(td_tmp) * (abs(td.data) > 1)
+        td = Variable(self.target.arr_to_gpu(target))
 
-        zeros = Variable(self.target.arr_to_gpu(np.zeros((self.replay_size, self.target.n_action), dtype=np.float32)))
-        loss = F.mean_squared_error(td_clip, zeros)
+        loss = F.mean_squared_error(td, qv) # E[(reward + gamma*maxQ' - Q)**2]
+        # update attributes
         self._loss = loss.data
         self._qv = np.max(qv.data)
+        
         return loss
-
+    
+    
     def start(self, observation):
         return self.agent.start(observation)
     
     
     def act(self, observation, reward, framefirstorlast=False):
+        # -- get best next action and sometimes explore random actions
+        # observation : image from which we will decide what the next action should be
+        # reward : here useful for the training phase
+        # framefirstorlast : only used to decide when to show the convolutions in case we chose to 
+        #                                (in that case we show them during the end of an episode)
+        
+        # manage epsilon (decrease but not under minimum value)
         if self.initial_exploration <= self._step:
             self.agent.epsilon -= 1.0/10**6
             if self.agent.epsilon < self.minimum_epsilon:
                 self.agent.epsilon = self.minimum_epsilon
         
         return self.train(observation, reward, episode_end=False, framefirstorlast=framefirstorlast)
-
+    
+    
     def end(self, observation, reward):
         self.train(observation, reward, episode_end=True)
-
+    
+    
     def train(self, observation, reward, episode_end, framefirstorlast=False):
+        # -- do the training steps
+        # observation : image from which we will decide what the next action should be
+        # reward : last reward
+        # episode_end : if it is the end of the episode
+        # framefirstorlast : only used to decide when to show the convolutions in case we chose to 
+        #                                (in that case we show them during the end of an episode)
+        
+        # set variables
         action = 0
         last_state = self.agent.get_state()
         last_action = self.agent.last_action
+        
+        # decide next best action and memorize scenario in replay buffer
         if not episode_end:
             action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast)
             result_state = self.agent.get_state()
             self.memory.stock_replay_information(last_state, last_action, result_state[0], reward, False)
-            #print("is the same ?", last_state[0]==result_state[0])
         else:
             self.memory.stock_replay_information(last_state, last_action, last_state, reward, True)
-
+        
+        # experience replays from replay buffer
         if self.initial_exploration <= self._step:
             self.experience_replay()
-
+            # reset the Q functions to be equal
             if self._step % self.target_update_freq == 0:
                 self.target.copyparams(self.agent.q)
-            
         self._step += 1
-        return action
-
-    """
-    def memorize(self, state, action, reward, next_state, episode_end):
-        _index = self._step % self.memory_size
-        self.memory[0][_index] = state
-        self.memory[1][_index] = action
-        self.memory[2][_index] = reward
-        if not episode_end:
-            self.memory[3][_index] = next_state
-        self.memory[4][_index] = episode_end
-        """
         
-
+        return action
+    
+    
     def experience_replay(self):
+        # -- replay old scenarios
+        
+        # get random past scenarios from replay buffer
         indices = []
         if self._step < self.memory_size-1:
             indices = np.random.randint(0, self.memory.cursor, (self.replay_size))
         else:
             indices = np.random.randint(0, self.memory_size, (self.replay_size))
-        """
-        states = []
-        actions = []
-        rewards = []
-        next_states = []
-        episode_ends = []
-        for i in indices: # copy is too heavy, redo it with reference
-            states.append(self.memory[0][i])
-            actions.append(self.memory[1][i])
-            rewards.append(self.memory[2][i])
-            next_states.append(self.memory[3][i])
-            episode_ends.append(self.memory[4][i])
-        """
-        to_np = lambda arr: np.array(arr)
+        
+        # clear optimizer's gradiant
         self.optimizer.target.cleargrads()
-        #loss = self.calc_loss(to_np(states), to_np(actions), to_np(rewards), to_np(next_states), to_np(episode_ends))
+        # calculate loss
+        to_np = lambda arr: np.array(arr)
         loss = self.calc_loss(to_np(indices))
+        
+        # memorize data for loss graph
+        if self._step%10==0 :
+            self.loss_values.append(loss.data)
+        
+        # update the optimizer
         loss.backward()
         self.optimizer.update()
+    
     
     def report(self, episode):
         s = "{0}: loss={1}, q value={2}, epsilon={3}".format(self._step, self._loss, self._qv, self.agent.epsilon)
         self.agent.save(episode)
+        
         return s
+

@@ -9,212 +9,134 @@ import chainer.functions as F
 import chainer.links as L
 from chaintestmodel5.agent import Agent
 import chainer.initializers as I 
-
 from skimage.color import rgb2gray
 from skimage.transform import resize
-
 import matplotlib.pyplot as plt
 
-class Q(Chain):
-    """
-    You want to optimize this function to determine the action from state (state is represented by CNN vector)
-    """
 
-    sizex = 80  # 80 X y image
-    sizey = 80  # x X 80 image
+class Q(Chain):
+    # determines the next action to do from the given state
     
-    def __init__(self, n_history, n_action, on_gpu=False,model_lstm=False):
-        self.model_lstm=model_lstm
-        self.n_history = n_history # we could rename it to number of channels, here it's one since we work with grayscale
+    
+    # size of the given image (state)
+    sizex = 80
+    sizey = 80
+    
+    
+    def __init__(self, n_channels, n_action, on_gpu=False):
+        # -- initialize the model
+        # n_channels : number of channels (1 for grayscale, 3 for rgb)
+        # n_action : number of possible actions
+        # on_gpu : can use gpu specific functions
+        
+        # memorize settings
+        self.n_channels = n_channels
         self.n_action = n_action
         self.on_gpu = on_gpu
-        super(Q, self).__init__(
-            l1=L.Convolution2D(n_history, 32, ksize=8, stride=4, nobias=False, initialW=I.HeNormal(np.sqrt(2) / np.sqrt(2))),
-            l2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False, initialW=I.HeNormal(np.sqrt(2) / np.sqrt(2))),
-            l3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
-            l4=L.Linear(3136, 512, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
-            lstm = L.LSTM(3136, 3136),
-            out=L.Linear(512, self.n_action, initialW=np.zeros((n_action, 512), dtype=np.float32))
-        )
         if on_gpu:
             self.to_gpu()
-    """        
-    def __call__(self, state: np.ndarray, show=False):
+        
+        # define 2 convolutions, a linear function, a lstm (not used for now) and another linear function as the out
+        super(Q, self).__init__(
+            conv1=L.Convolution2D(n_channels, 8, ksize=(6,6), stride=(3,3), pad=(1,1), nobias=False,
+                                  initialW=I.HeNormal(0.05),initial_bias=I.Constant(0.05)),
+            conv2=L.Convolution2D(8, 8, ksize=(3,3), stride=(2,2), pad=(1,1), nobias=False,
+                                  initialW=I.HeNormal(0.05),initial_bias=I.Constant(0.5)),
+            lnear=L.Linear(1352, 128, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
+            lstm = L.LSTM(1352, 1352),
+            out=L.Linear(128, self.n_action, initialW=np.zeros((n_action, 128), dtype=np.float32)))
 
-        if show:
-            #print("ZAWARUDO")
-            plt.imshow(state[0][0], interpolation='nearest', cmap='gray')
-            titless = plt.title('resized frame 80x80')
-            #plt.getp(titless)
-            plt.show()
-
-        _state = self.arr_to_gpu(state)
-        s = Variable(_state)
-        h1 = F.relu(self.l1(s))
-
-        if show:
-            self.show_convolutions(h1)
-
-        h2 = F.relu(self.l2(h1))
-
-        if show:
-            self.show_convolutions(h2)
-
-        h3 = F.relu(self.l3(h2))
-
-        if show:
-            self.show_convolutions(h3)
-
-        print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]), " --- ", len(h1), " and ",len(h1[0]), " and ",len(h1[0][0]), " and ",len(h1[0][0][0]), " --- ", len(h2), " and ",len(h2[0]), " and ",len(h2[0][0]), " and ",len(h2[0][0][0]), " --- ", len(h3), " and ",len(h3[0]), " and ",len(h3[0][0]), " and ",len(h3[0][0][0]))
-
-        #hlstm = F.relu(self.lstm(h3))
-        #h4 = F.relu(self.l4(hlstm))
-        h4 = F.relu(self.l4(h3))
-        #hlstm = F.relu(self.lstm(h4))
-        q_value = self.out(h4)
-        return q_value
-        """
 
     def __call__(self, state: np.ndarray, show=False):
+        # -- execute the q function on the current state
+        # state : the current screen resized
+        # show : show the convolutions
         
-        """if(len(state)<1):#> now impossible for test
-            # in case we have several observations at once, happens during calc_loss
-            result = []
-            #print("begin :",state)
-            for item in state:
-                #print("item :", item)
-                obsitem = np.ndarray(shape = (1,), dtype = "object")
-                obsitem[0] = item
-                #obsitem=np.ndarray(1)
-                #obsitem.put(0,item)
-                #print("obsitem",obsitem)
-                result.append(self(obsitem))
-            #result = Variable(data=result)
-            return result
-        else:"""
-        """
-        if(len(state)==1):
-            obsitem = np.ndarray(shape = (32,4,80,80), dtype = "float32")
-            for e in range(len(obsitem)):
-                obsitem[e]=state[0]
-            state = obsitem
-        if show:
-            #print("ZAWARUDO")
-            plt.imshow(state[0][0], interpolation='nearest', cmap='gray')
-            titless = plt.title('resized frame 80x80')
-            #plt.getp(titless)
-            plt.show()
-        """
+        # prepare state
         _state = self.arr_to_gpu(state)
-        s = Variable(_state)
-        #print("---------")
-        #print(type(_state))
-        #print(type(_state[0]))
-        #print(type(_state[0][0]))
-        #print(type(_state[0][0][0]))
-        #print(type(_state[0][0][0][0]))
-        #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]))
-        #print(state.dtype, " and ",state[0].dtype, " and ",state[0][0].dtype)
-        #print("state shape", state.shape)
-        h1 = F.relu(self.l1(s))
-        #print("h1 shape", h1.shape)
+        h0 = Variable(_state)
+
+        # state into first convolution
+        h1 = F.relu(self.conv1(h0))
         if show:
             self.show_convolutions(h1)
-
-        h2 = F.relu(self.l2(h1))
-        #print("h2 shape", h2.shape)
+        
+        # first convolution to second one
+        h2 = F.relu(self.conv2(h1))
         if show:
             self.show_convolutions(h2)
-
-        h3 = F.relu(self.l3(h2))
-        #print("h3 shape", h3.shape)
-        if show:
-            self.show_convolutions(h3)
-
-        #print(len(state), " and ",len(state[0]), " and ",len(state[0][0]), " and ",len(state[0][0][0]), " --- ", len(h1), " and ",len(h1[0]), " and ",len(h1[0][0]), " and ",len(h1[0][0][0]), " --- ", len(h2), " and ",len(h2[0]), " and ",len(h2[0][0]), " and ",len(h2[0][0][0]), " --- ", len(h3), " and ",len(h3[0]), " and ",len(h3[0][0]), " and ",len(h3[0][0][0]))
-
-        if self.model_lstm:
-            hlstm = F.relu(self.lstm(h3))
-            h4 = F.relu(self.l4(hlstm))
-        else:
-            h4 = F.relu(self.l4(h3))
-        #hlstm = F.relu(self.lstm(h4))
-        #print("h4 shape", h4.shape)
-        q_value = self.out(h4)
-        #print("q_value shape", q_value.shape)
-        #print(q_value)
-        return q_value
         
+        # second convolution to linear
+        h3 = F.relu(self.lnear(h2))
+        
+        #  first linear to second linear
+        q_value = self.out(h3)
+
+        return q_value
+    
     
     def arr_to_gpu(self, arr):
         return arr if not self.on_gpu else cuda.to_gpu(arr)
     
-    def show_convolution(self, big_array, xi=0, yj=0):
-        # the big_array is of dtype=object and is filled with Variable type
-        # we need to convert into dtype=float filled with float type in order to show the image
-        h1mod = np.asarray(big_array)
-        for k in range(len(h1mod[xi])):
-            for j in range(len(h1mod[xi][k])):
-                for i in range(len(h1mod[xi][k][j])) :
-                    ad = h1mod[xi][k][j]
-                    advalue = ad[i].array
-                    h1mod[xi][k][j][i] = np.float32(advalue.item())
-        h1float = np.ndarray(shape=(len(h1mod[xi][yj]),len(h1mod[xi][yj][j])), dtype=float)
-        for j in range(len(h1mod[xi][yj])):
-            for i in range(len(h1mod[xi][yj][j])) :
-                ad = h1mod[xi][yj][j]
-                h1float[j][i] = np.float(ad[i])
-        plt.imshow(h1float, interpolation='nearest')
-        titless = plt.title('convolution of size '+str(len(h1mod[xi][yj]))+"x"+str(len(h1mod[xi][yj][j])))
-        #plt.getp(titless)
-        plt.show()
         
     def show_convolutions(self, big_array):
-            # the big_array is of dtype=object and is filled with Variable type
-            # we need to convert into dtype=float filled with float type in order to show the image
-            h1mod = np.asarray(big_array)
-            for xi in range(len(h1mod)):
-                for k in range(len(h1mod[xi])):
-                    for j in range(len(h1mod[xi][k])):
-                        for i in range(len(h1mod[xi][k][j])) :
-                            ad = h1mod[xi][k][j]
-                            advalue = ad[i].array
-                            h1mod[xi][k][j][i] = np.float32(advalue.item())
-            h1float = np.ndarray(shape=(len(h1mod),len(h1mod[0]), len(h1mod[0][0]),len(h1mod[0][0][0])), dtype=float)
-            for xi in range(len(h1mod)):
-                for k in range(len(h1mod[xi])):
-                    for j in range(len(h1mod[xi][k])):
-                        for i in range(len(h1mod[xi][k][j])) :
-                            ad = h1mod[xi][k][j]
-                            h1float[xi][k][j][i] = np.float(ad[i])
-                            
-            fig = plt.figure()
-            rows=7
-            columns=len(h1mod[xi])/7+1
-            #for xi in range(len(h1mod)):
-            xi=0
+        # -- show the convolutions
+        # big_array : is of dtype=object and is filled with Variable type
+        
+        # convert into dtype=float filled with float type in order to show the image
+        h1mod = np.asarray(big_array)
+        for xi in range(len(h1mod)):
             for k in range(len(h1mod[xi])):
-                if k+1<rows*columns:
-                    fig.add_subplot(rows,columns,k+1)
-                    plt.imshow(h1float[xi][k], interpolation='nearest', cmap='gray')
-            titless = plt.title('convolution of size '+str(len(h1mod[0][0]))+"x"+str(len(h1mod[0][0][j])))
-            #plt.getp(titless)
-            plt.show()
+                for j in range(len(h1mod[xi][k])):
+                    for i in range(len(h1mod[xi][k][j])) :
+                        ad = h1mod[xi][k][j]
+                        advalue = ad[i].array
+                        h1mod[xi][k][j][i] = np.float32(advalue.item())
+        h1float = np.ndarray(shape=(len(h1mod),len(h1mod[0]), len(h1mod[0][0]),len(h1mod[0][0][0])), dtype=float)
+        # prepare graph data
+        for xi in range(len(h1mod)):
+            for k in range(len(h1mod[xi])):
+                for j in range(len(h1mod[xi][k])):
+                    for i in range(len(h1mod[xi][k][j])) :
+                        ad = h1mod[xi][k][j]
+                        h1float[xi][k][j][i] = np.float(ad[i])
+        # prepare graph configs
+        fig = plt.figure()
+        rows=7
+        columns=len(h1mod[xi])/7+1
+        xi=0
+        for k in range(len(h1mod[xi])):
+            if k+1<rows*columns:
+                fig.add_subplot(rows,columns,k+1)
+                plt.imshow(h1float[xi][k], interpolation='nearest', cmap='gray')
+        titless = plt.title('convolution of size '+str(len(h1mod[0][0]))+"x"+str(len(h1mod[0][0][j])))
+        # show graph
+        plt.show()
 
 
 class DQNAgent(Agent):
+    # the one who decides which action to make
     
-    def __init__(self, actions, epsilon=1, n_history=64, on_gpu=False, model_path="", load_if_exist=True):
+    def __init__(self, actions, epsilon=0.1, on_gpu=False, model_path="", load_if_exist=True):
+        # -- initialize the agent
+        # actions : the possible actions
+        # epsilon : the bigger the more we do random actions
+        # on_gpu : use gpu specific functions
+        # model_path : where the training results are
+        # load_if_exist : load the training form the path
+        
+        # memorize settings
         self.actions = actions
         self.epsilon = epsilon
+        self.loss_values =[]
         self.q = Q(1, len(actions), on_gpu)
         self._state = []
-        self._observations = [
-            np.zeros((self.q.sizex, self.q.sizey), np.float32), 
-            np.zeros((self.q.sizex, self.q.sizey), np.float32)
-        ]  # now & pre
+        self._observations = [ np.zeros((self.q.sizex, self.q.sizey), np.float32), 
+                                np.zeros((self.q.sizex, self.q.sizey), np.float32) ]
         self.last_action = 0
         self.last_state=[]
+        
+        # load training
         self.model_path = model_path if model_path else os.path.join(os.path.dirname(__file__), "./store")
         if not os.path.exists(self.model_path):
             print("make directory to store model at {0}".format(self.model_path))
@@ -225,77 +147,89 @@ class DQNAgent(Agent):
                 print("load model file {0}.".format(models[-1]))
                 serializers.load_npz(os.path.join(self.model_path, models[-1]), self.q)  # use latest model
     
+    
     def _update_state(self, observation):
+        # -- get latest state in the right format and manage the _state attribute
+        # observation : image we want to reformat
+        
         formatted = self._format(observation)
         state = np.maximum(formatted, self._observations[0])
         self._state.append(state)
-        if len(self._state) > self.q.n_history:
+        if len(self._state) > self.q.n_channels:
             self._state.pop(0)
         return formatted
     
+    
     @classmethod
     def _format(cls, image):
-        """ prepro 210x160x3 uint8 frame into 6400 (80x80) 1D float vector """
-        #im = resize(rgb2gray(image), (80, 80))
+        # format the given image
+        # image : matrix to reformat
+        
         im = image[0]
-        #print(im)
-        #plt.imshow(im, interpolation='nearest')
-        #plt.show()
         return im.astype(np.float32)
 
+    
     def start(self, observation):
+        # reset attributes for the new episode and return best action
+        # observation : first screenshot of our new episode
+        
         self._state = []
-        self._observations = [
-            np.zeros((self.q.sizex, self.q.sizey), np.float32), 
-            np.zeros((self.q.sizex, self.q.sizey), np.float32)
-        ]
+        self._observations = [  np.zeros((self.q.sizex, self.q.sizey), np.float32), 
+                                np.zeros((self.q.sizex, self.q.sizey), np.float32) ]
         self.last_action = 0
-
         action = self.act(observation, 0)
         return action
     
+    
     def act(self, observation, reward, framefirstorlast=False):
+        # -- get best next action and sometimes explore random actions
+        # observation : image from which we will decide what the next action should be
+        # reward : here useless but needed for trainer (they are of the same type)
+        # framefirstorlast : only used to decide when to show the convolutions in case we chose to 
+        #                                (in that case we show them during the end of an episode)
+        
+        # get important data
         o = self._update_state(observation)
         s = self.get_state()
-        #print("lenbefore", len(np.array([s])))
-        #TODO : show first and last
-        qv = self.q(np.array([s]), framefirstorlast) # batch size = 1
-
+        qv = self.q(np.array([s]), framefirstorlast)
+        # decide to explore or not
         if np.random.rand() < self.epsilon:
-            action = np.random.randint(0, len(self.actions))
+            action = np.random.randint(0, len(self.actions)) # random action
         else:
-            action = np.argmax(qv.data[-1])
-        
+            action = np.argmax(qv.data[-1]) # chose an action that fits best the situation described by the observation
+        # update data
         self._observations[-1] = self._observations[0].copy()
         self._observations[0] = o
         self.last_action = action
-
+        
         return action
     
 
     def get_state(self):
         state = []
-        for  i in range(self.q.n_history):
+        for  i in range(self.q.n_channels):
             if i < len(self._state):
                 state.append(self._state[i])
             else:
                 state.append(np.zeros((self.q.sizex, self.q.sizey), dtype=np.float32))
+        np_state = np.array(state)
         
-        np_state = np.array(state)  # n_history x (width x height)
         return np_state
     
-    #TODO : change file names to doom names
+    
     def save(self, index=0):
-        fname = "pong.model" if index == 0 else "pong_{0}.model".format(index)
+        fname = "doom.model" if index == 0 else "doom_{0}.model".format(index)
         path = os.path.join(self.model_path, fname)
         serializers.save_npz(path, self.q)
+    
     
     def get_model_files(self):
         files = os.listdir(self.model_path)
         model_files = []
         for f in files:
-            if f.startswith("pong") and f.endswith(".model"):
+            if f.startswith("doom") and f.endswith(".model"):
                 model_files.append(f)
         
         model_files.sort()
         return model_files
+

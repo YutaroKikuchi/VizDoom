@@ -130,6 +130,7 @@ class Environment(env.Env):
                 last_action = action
 
                 if episode_done: # if episode has ended because of a winning/losing condition met after doing the action
+                    print("another episode done ", step_count)
                     agent.end(observation, reward) # end the episode
                 
                 # update variables
@@ -207,7 +208,7 @@ class Environment(env.Env):
         return len(self.legal_actions)
 
     def receive_action(self, action):
-        self._reward = self.game.make_action(self.legal_actions[action], 10)
+        self._reward = self.game.make_action(self.legal_actions[int(action)], 10)
         return self._reward
 
     def initialize(self):
@@ -238,4 +239,3 @@ class Environment(env.Env):
 
     def close(self):
         pass
-

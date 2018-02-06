@@ -37,11 +37,12 @@ class Q(Chain):
             self.to_gpu()
         
         # define 2 convolutions, a linear function, a lstm (not used for now) and another linear function as the out
+        # good parameters are : (n_channels, 8, ksize=6, stride=3, pad=1, nobias=False), (8, 8, ksize=3, stride=2, pad=1, nobias=False), 1352, 128
         super(Q, self).__init__(
-            conv1=L.Convolution2D(n_channels, 8, ksize=(6,6), stride=(3,3), pad=(1,1), nobias=False,
-                                  initialW=I.HeNormal(0.05),initial_bias=I.Constant(0.05)),
-            conv2=L.Convolution2D(8, 8, ksize=(3,3), stride=(2,2), pad=(1,1), nobias=False,
-                                  initialW=I.HeNormal(0.05),initial_bias=I.Constant(0.5)),
+            conv1=L.Convolution2D(n_channels, 8, ksize=6, stride=3, pad=1, nobias=False,
+                                  ),
+            conv2=L.Convolution2D(8, 8, ksize=3, stride=2, pad=1, nobias=False,
+                                 ),
             lnear=L.Linear(1352, 128, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
             lstm = L.LSTM(1352, 1352),
             out=L.Linear(128, self.n_action, initialW=np.zeros((n_action, 128), dtype=np.float32)))
@@ -66,8 +67,10 @@ class Q(Chain):
         if show:
             self.show_convolutions(h2)
         
+        h2p5 = F.relu(self.lstm(h2))
+        
         # second convolution to linear
-        h3 = F.relu(self.lnear(h2))
+        h3 = F.relu(self.lnear(h2p5))
         
         #  first linear to second linear
         q_value = self.out(h3)
@@ -129,7 +132,10 @@ class DQNAgent(Agent):
         self.actions = actions
         self.epsilon = epsilon
         self.loss_values =[]
-        self.q = Q(1, len(actions), on_gpu)
+        if n_gpu :
+            self.q = Q(1, len(actions), on_gpu).to_gpu()
+        else:
+            self.q = Q(1, len(actions), on_gpu)
         self._state = []
         self._observations = [ np.zeros((self.q.sizex, self.q.sizey), np.float32), 
                                 np.zeros((self.q.sizex, self.q.sizey), np.float32) ]
@@ -169,7 +175,7 @@ class DQNAgent(Agent):
         return im.astype(np.float32)
 
     
-    def start(self, observation):
+    def start(self, observation, repeat=1):
         # reset attributes for the new episode and return best action
         # observation : first screenshot of our new episode
         
@@ -177,11 +183,11 @@ class DQNAgent(Agent):
         self._observations = [  np.zeros((self.q.sizex, self.q.sizey), np.float32), 
                                 np.zeros((self.q.sizex, self.q.sizey), np.float32) ]
         self.last_action = 0
-        action = self.act(observation, 0)
+        action = self.act(observation, 0, repeat=repeat)
         return action
     
     
-    def act(self, observation, reward, framefirstorlast=False):
+    def act(self, observation, reward, framefirstorlast=False, repeat=1):
         # -- get best next action and sometimes explore random actions
         # observation : image from which we will decide what the next action should be
         # reward : here useless but needed for trainer (they are of the same type)
@@ -191,7 +197,12 @@ class DQNAgent(Agent):
         # get important data
         o = self._update_state(observation)
         s = self.get_state()
-        qv = self.q(np.array([s]), framefirstorlast)
+        if repeat>1:
+            big_array=np.zeros((repeat,1,len(observation[0]), len(observation[0][0])), dtype=np.float32)
+            big_array[0][0]=s[0]
+        else:
+            big_array=np.array([s])
+        qv = self.q(big_array, framefirstorlast)
         # decide to explore or not
         if np.random.rand() < self.epsilon:
             action = np.random.randint(0, len(self.actions)) # random action

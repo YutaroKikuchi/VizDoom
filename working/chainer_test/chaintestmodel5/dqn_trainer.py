@@ -26,7 +26,10 @@ class DQNTrainer(Agent):
         
         # memorize settings
         self.agent = agent
-        self.target = Q(self.agent.q.n_channels, self.agent.q.n_action, on_gpu=self.agent.q.on_gpu)
+        if agent.on_gpu :
+            self.target = Q(self.agent.q.n_channels, self.agent.q.n_action, on_gpu=self.agent.q.on_gpu).to_gpu()
+        else:
+            self.target = Q(self.agent.q.n_channels, self.agent.q.n_action, on_gpu=self.agent.q.on_gpu)
         self.memory_size = memory_size
         self.replay_size = replay_size
         self.gamma = gamma
@@ -59,7 +62,6 @@ class DQNTrainer(Agent):
         to_np = lambda arr: np.array(arr)
         states=to_np([[self.memory.before_action_obs[i]] for i in indices])
         qv = self.agent.q(states) # Q
-        
         # prepare (maxQ')
         next_states=to_np([[self.memory.after_action_obs[i]] for i in indices])
         q_t = self.target(next_states)
@@ -73,7 +75,7 @@ class DQNTrainer(Agent):
             else:
                 _r = np.sign(self.memory.reward[indices[i]]) + self.gamma * max_q_prime[i]
             target[i][self.memory.action[indices[i]]] = _r
-        td = Variable(self.target.arr_to_gpu(target))
+        td = Variable(self.target.arr_to_gpu(target)).data
 
         loss = F.mean_squared_error(td, qv) # E[(reward + gamma*maxQ' - Q)**2]
         # update attributes
@@ -84,7 +86,7 @@ class DQNTrainer(Agent):
     
     
     def start(self, observation):
-        return self.agent.start(observation)
+        return self.agent.start(observation, repeat= self.replay_size)
     
     
     def act(self, observation, reward, framefirstorlast=False):
@@ -122,7 +124,7 @@ class DQNTrainer(Agent):
         
         # decide next best action and memorize scenario in replay buffer
         if not episode_end:
-            action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast)
+            action = self.agent.act(observation, reward, framefirstorlast=framefirstorlast, repeat=1)
             result_state = self.agent.get_state()
             self.memory.stock_replay_information(last_state, last_action, result_state[0], reward, False)
         else:
@@ -169,4 +171,3 @@ class DQNTrainer(Agent):
         self.agent.save(episode)
         
         return s
-

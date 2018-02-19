@@ -11,6 +11,7 @@ from chaintestmodel5.agent import Agent
 
 class DQNTrainer(Agent):
     # the one organizing the training
+    # replay_size=64
     
     def __init__(self, agent, memory_size=10**4, replay_size=64, gamma=0.99, initial_exploration=65, target_update_freq=10**4, learning_rate=0.00025,
                     minimum_epsilon=0.1):

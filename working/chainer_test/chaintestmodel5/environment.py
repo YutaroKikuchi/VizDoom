@@ -61,8 +61,8 @@ class Environment(env.Env):
         self.game.set_render_corpses(False)
         self.game.set_render_screen_flashes(True) # Effect upon taking damage or picking up items
         # sets the available actions
-        self.game.add_available_button(Button.MOVE_LEFT)
-        self.game.add_available_button(Button.MOVE_RIGHT)
+        self.game.add_available_button(Button.TURN_LEFT)
+        self.game.add_available_button(Button.TURN_RIGHT)
         self.game.add_available_button(Button.ATTACK)
         self.legal_actions = [[True, False, False], [False, True, False], [False, False, True]]
         self.action_space = spaces.Discrete(len(self.legal_actions))
@@ -130,7 +130,7 @@ class Environment(env.Env):
                 last_action = action
 
                 if episode_done: # if episode has ended because of a winning/losing condition met after doing the action
-                    print("another episode done ", step_count)
+                    #print("another episode done ", step_count)
                     agent.end(observation, reward) # end the episode
                 
                 # update variables

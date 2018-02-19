@@ -41,10 +41,10 @@ class Q(Chain):
         super(Q, self).__init__(
             conv1=L.Convolution2D(n_channels, 8, ksize=6, stride=3, pad=1, nobias=False,
                                   ),
-            conv2=L.Convolution2D(8, 8, ksize=3, stride=2, pad=1, nobias=False,
+            conv2=L.Convolution2D(8, 3, ksize=3, stride=2, pad=1, nobias=False,
                                  ),
-            lnear=L.Linear(1352, 128, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
-            lstm = L.LSTM(1352, 1352),
+            lnear=L.Linear(507, 128, initialW=I.HeNormal(np.sqrt(2)/ np.sqrt(2))),
+            lstm = L.LSTM(507, 507),
             out=L.Linear(128, self.n_action, initialW=np.zeros((n_action, 128), dtype=np.float32)))
 
 
@@ -67,10 +67,10 @@ class Q(Chain):
         if show:
             self.show_convolutions(h2)
         
-        h2p5 = F.relu(self.lstm(h2))
+        #h2p5 = F.relu(self.lstm(h2))
         
         # second convolution to linear
-        h3 = F.relu(self.lnear(h2p5))
+        h3 = F.relu(self.lnear(h2))
         
         #  first linear to second linear
         q_value = self.out(h3)
@@ -132,7 +132,8 @@ class DQNAgent(Agent):
         self.actions = actions
         self.epsilon = epsilon
         self.loss_values =[]
-        if n_gpu :
+        self.on_gpu = on_gpu
+        if on_gpu :
             self.q = Q(1, len(actions), on_gpu).to_gpu()
         else:
             self.q = Q(1, len(actions), on_gpu)

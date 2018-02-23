@@ -1,5 +1,6 @@
 # modified https://github.com/icoxfog417/chainer_pong/blob/master/model/dqn_agent.py
 import os
+import math
 import numpy as np
 from chainer import Chain
 from chainer import Variable
@@ -212,15 +213,25 @@ class CriticAgent(Agent):
             big_array=np.array([s])
         qv = self.q(big_array, framefirstorlast)
         # decide to explore or not
-        if np.random.rand() < self.epsilon:
-            action = np.random.randint(0, len(self.actions)) # random action
+        if np.random.rand() < self.epsilon or math.isnan(qv.data[0][1]):
+            action = [np.float32(np.random.randint(0, 1000)/1000), np.float32(np.random.randint(0, 100)/100)] # random action
+            b = (action[1]>0.5)
+            action[1]=b
         else:
-            action = np.argmax(qv.data[-1]) # chose an action that fits best the situation described by the observation
+            #print("qv", qv)
+            #print(qv.data[0][1])
+            #print(qv.data[0][1]>0.5)
+            b = (qv.data[0][1]>0.5)
+            action = []
+            action.append(qv.data[0][0])
+            action.append(b)
+            #action = np.argmax(qv.data[-1]) # chose an action that fits best the situation described by the observation
         # update data
         self._observations[-1] = self._observations[0].copy()
         self._observations[0] = o
         self.last_action = action
         
+        # make it shoot left and right (between -1 and 1)
         return action
     
 

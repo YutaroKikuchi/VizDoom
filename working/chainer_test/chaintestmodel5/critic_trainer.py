@@ -8,6 +8,7 @@ from chaintestmodel5.critic_agent import QCritic
 from chaintestmodel5.replay_buffer import ReplayBuffer
 import chainer.functions as F
 from chaintestmodel5.agent import Agent
+from threading import Thread
 
 
 class CriticTrainer(Agent):
@@ -47,12 +48,12 @@ class CriticTrainer(Agent):
         n_hist = self.agent.q.n_channels
         sizex = self.agent.q.sizex
         sizey = self.agent.q.sizey
-        self.memory=ReplayBuffer(memory_size, sizex, sizey)
+        self.memory=ReplayBuffer(memory_size, sizex, sizey, 2)
 
         # prepare optimizer
         self.optimizer_critic = optimizers.RMSpropGraves(lr=learning_rate, alpha=0.95, momentum=0.95, eps=0.01)
         self.optimizer_critic.setup(self.agent.q_critic)
-        self.optimizer = optimizers.RMSpropGraves(lr=learning_rate, alpha=0.95, momentum=0.95, eps=0.01)
+        self.optimizer = optimizers.Adam()
         self.optimizer.setup(self.agent.q)
         self._loss = 9
         self._qv = 0
@@ -66,8 +67,9 @@ class CriticTrainer(Agent):
         to_np = lambda arr: np.array(arr)
         states=to_np([[self.memory.before_action_obs[i]] for i in indices])
         old_action=to_np([np.zeros(self.agent.q_critic.n_action, dtype=np.float32) for i in indices])
-        for act in range(len(old_action)):
-            old_action[act][self.memory.action[indices[act]]]=1
+        for act in range(len(indices)):
+            old_action[act]=self.memory.action[indices[act]]
+        #print("old action ", old_action)
         qv = self.agent.q_critic(states,old_action) # Q
         # prepare (maxQ')
         next_states=to_np([[self.memory.after_action_obs[i]] for i in indices])
@@ -95,7 +97,8 @@ class CriticTrainer(Agent):
     
     
     def start(self, observation):
-        return self.agent.start(observation, repeat= self.replay_size)
+        Thread(target=self.experience_replay).start()
+        return self.agent.start(observation, repeat= 1)
     
     
     def act(self, observation, reward, framefirstorlast=False):
@@ -127,7 +130,7 @@ class CriticTrainer(Agent):
         #                                (in that case we show them during the end of an episode)
         
         # set variables
-        action = 0
+        action = [0,False]
         last_state = self.agent.get_state()
         last_action = self.agent.last_action
         
@@ -138,9 +141,17 @@ class CriticTrainer(Agent):
             #----actor-------------------
             s = self.agent.get_state()
             formated_observation=np.array([s])
-            array_action=np.array([np.zeros(self.agent.q_critic.n_action, dtype=np.float32)])
-            array_action[0][action]=1
-            loss = self.agent.q_critic(formated_observation, array_action)
+            #print("action : ",action)
+            #print("obs len : ",len(observation[0]))
+            #print("reward : ",reward)
+            #print("first type ",type(action[0]))
+            action_nobool = action
+            for i in range(len(action_nobool)):
+                if isinstance(action_nobool[i], (bool,)):
+                    action_nobool[i]  = 1 if action_nobool[i] else 0
+            #array_action=np.array([np.zeros(self.agent.q_critic.n_action, dtype=np.float32)])
+            #array_action[0][action]=1
+            loss = self.agent.q_critic(formated_observation, np.array([action_nobool], dtype=np.float32))
 
             # update the optimizer (of the actor)
             loss.backward()
@@ -152,40 +163,45 @@ class CriticTrainer(Agent):
             self.memory.stock_replay_information(last_state, last_action, last_state, reward, True)
         
         # experience replays from replay buffer
-        if self.initial_exploration <= self._step:
-            self.experience_replay()
+        #if self.initial_exploration <= self._step:
+            #self.experience_replay()
             # reset the Q functions to be equal
-            if self._step % self.target_update_freq == 0:
-                self.target.copyparams(self.agent.q_critic)
-        self._step += 1
+            #if self._step % self.target_update_freq == 0:
+             #   self.target.copyparams(self.agent.q_critic)
+        #self._step += 1
         
         return action
     
     
     def experience_replay(self):
-        # -- replay old scenarios
-        
-        # get random past scenarios from replay buffer
-        indices = []
-        if self._step < self.memory_size-1:
-            indices = np.random.randint(0, self.memory.cursor, (self.replay_size))
-        else:
-            indices = np.random.randint(0, self.memory_size, (self.replay_size))
-        
-        #----critic------------------------
-        # clear optimizer's gradiant
-        self.optimizer_critic.target.cleargrads()
-        # calculate loss
-        to_np = lambda arr: np.array(arr)
-        loss = self.calc_loss(to_np(indices))
-        
-        # memorize data for loss graph
-        if self._step%10==0 :
-            self.loss_values.append(loss.data)
-        
-        # update the optimizer (of the critic)
-        loss.backward()
-        self.optimizer_critic.update()
+        if self.initial_exploration <= self._step:
+            # -- replay old scenarios
+            # get random past scenarios from replay buffer
+            indices = []
+            if self._step < self.memory_size-1:
+                indices = np.random.randint(0, self.memory.cursor, (self.replay_size))
+            else:
+                indices = np.random.randint(0, self.memory_size, (self.replay_size))
+
+            #----critic------------------------
+            # clear optimizer's gradiant
+            self.optimizer_critic.target.cleargrads()
+            # calculate loss
+            to_np = lambda arr: np.array(arr)
+            loss = self.calc_loss(to_np(indices))
+
+            # memorize data for loss graph
+            if self._step%10==0 :
+                self.loss_values.append(loss.data)
+
+            # update the optimizer (of the critic)
+            loss.backward()
+            self.optimizer_critic.update()
+            
+            if self._step % self.target_update_freq == 0:
+                self.target.copyparams(self.agent.q_critic)
+        self._step += 1
+            
         
     
     

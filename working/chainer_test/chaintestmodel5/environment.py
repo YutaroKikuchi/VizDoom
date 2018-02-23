@@ -60,11 +60,18 @@ class Environment(env.Env):
         self.game.set_render_messages(False)  # In-game messages
         self.game.set_render_corpses(False)
         self.game.set_render_screen_flashes(True) # Effect upon taking damage or picking up items
+        
         # sets the available actions
-        self.game.add_available_button(Button.TURN_LEFT)
-        self.game.add_available_button(Button.TURN_RIGHT)
+        nbaction = 0
+        
+        self.game.add_available_button(Button.TURN_LEFT_RIGHT_DELTA)
+        nbaction += 1
         self.game.add_available_button(Button.ATTACK)
-        self.legal_actions = [[True, False, False], [False, True, False], [False, False, True]]
+        nbaction += 1
+        
+        self.legal_actions = [[j==i for j in range(nbaction)] for i in range(nbaction)]
+        #self.legal_actions = [[True, False, False], [False, True, False], [False, False, True]]
+        
         self.action_space = spaces.Discrete(len(self.legal_actions))
         self.actions = self.legal_actions
         # sets other game configs
@@ -126,6 +133,11 @@ class Environment(env.Env):
                     else:
                         action = last_action # repeat previous action
                 # act in the game and get data
+                if isinstance(action, (list,)):
+                    if action[0]>0.5:
+                        action[0]=action[0]/0.5
+                    else:
+                        action[0]=action[0]/0.5 *-1
                 observation, reward, episode_done, info = self.step(action)
                 last_action = action
 
@@ -208,7 +220,10 @@ class Environment(env.Env):
         return len(self.legal_actions)
 
     def receive_action(self, action):
-        self._reward = self.game.make_action(self.legal_actions[int(action)], 10)
+        if not isinstance(action, (list,)):
+            self._reward = self.game.make_action(self.legal_actions[int(action)], 10)
+        else:
+            self._reward = self.game.make_action(action, 10)
         return self._reward
 
     def initialize(self):

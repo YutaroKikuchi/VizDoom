@@ -5,7 +5,7 @@ import math
 class ReplayBuffer():
     # where we memorize past scenarios
 
-    def __init__(self,capacity=10**4,sizex=80,sizey=80):
+    def __init__(self,capacity=10**4,sizex=80,sizey=80, nb_action=1):
         # -- initialize the buffer
         # capacity : defines how many scenarios we can store
         # sizex : width of the images to store
@@ -14,7 +14,10 @@ class ReplayBuffer():
         # memorize settings
         self.before_action_obs=np.zeros((capacity, sizex, sizey), dtype=np.float32)
         self.after_action_obs=np.zeros((capacity, sizex, sizey), dtype=np.float32)
-        self.action=np.zeros(capacity, dtype=np.uint8)
+        if nb_action>1:
+            self.action=np.zeros((capacity, nb_action))
+        else :
+            self.action=np.zeros(capacity, dtype=np.uint8)
         self.reward=np.zeros((capacity, 1), dtype=np.float32)
         self.is_episode_end=np.zeros((capacity, 1), dtype=np.bool)
         self.cursor=0
